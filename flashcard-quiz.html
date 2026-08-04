@@ -867,18 +867,16 @@ textarea{
     <button class="back-btn" id="backFromWrongRedo">← 返回错题本</button>
     <h3 style="text-align:center;margin:16px 0;color:var(--text)">错题重做</h3>
     <div id="wrongRedoContent"></div>
-    <button class="btn-primary" id="wrongRedoSubmit" style="display:block;margin:16px auto">提交</button>
-    <div class="followup-wrap" id="wrongFuWrap" style="display:none">
-      <button class="fu-ask-btn" id="wrongFuBtn">💬 追问</button>
-      <div class="fu-chat" id="wrongFuChat">
-        <div class="fu-input-row">
-          <input type="text" id="wrongFuInput" placeholder="输入你想追问的问题…" maxlength="300">
-          <button class="fu-send-btn" id="wrongFuSend">发送</button>
-        </div>
-        <div class="fu-user-q" id="wrongFuUser" style="display:none"></div>
-        <div class="fu-ai-r" id="wrongFuAi" style="display:none"></div>
+    <button class="fu-ask-btn" id="wrongFuBtn" style="display:none;margin-bottom:10px">💬 追问</button>
+    <div class="fu-chat" id="wrongFuChat" style="display:none;margin-bottom:10px">
+      <div class="fu-input-row">
+        <input type="text" id="wrongFuInput" placeholder="输入你想追问的问题…" maxlength="300">
+        <button class="fu-send-btn" id="wrongFuSend">发送</button>
       </div>
+      <div class="fu-user-q" id="wrongFuUser" style="display:none"></div>
+      <div class="fu-ai-r" id="wrongFuAi" style="display:none"></div>
     </div>
+    <button class="btn-primary" id="wrongRedoSubmit" style="display:block;margin:16px auto 0">提交</button>
     <div id="wrongRedoResult" style="text-align:center;margin-top:12px"></div>
   </div>
 
@@ -1493,7 +1491,7 @@ textarea{
     wrongRedoIndex = index;
     wrongRedoAnswer = null;
     wrongRedoResult.innerHTML = '';
-    $('wrongFuWrap').style.display = 'none';
+    $('wrongFuBtn').style.display = 'none';
     $('wrongFuChat').style.display = 'none';
     const q = wrongBook[index];
     let html = '';
@@ -1587,8 +1585,8 @@ textarea{
     if(q.explanation){
       wrongRedoResult.innerHTML += `<div style="font-size:13px;color:var(--text3);margin-top:6px">💡 ${escapeHtml(q.explanation)}</div>`;
     }
-    // Show follow-up section
-    $('wrongFuWrap').style.display = 'block';
+    // Show follow-up button
+    $('wrongFuBtn').style.display = 'inline-flex';
   });
 
   // Wrong redo follow-up
@@ -1638,7 +1636,6 @@ ${answerInfo}
     inp.disabled = false;
     $('wrongFuSend').disabled = false;
     inp.value = '';
-    $('wrongFuWrap').style.display = 'block';
   });
 
   // Wrong book navigation
