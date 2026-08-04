@@ -925,7 +925,7 @@ textarea{
     });
 
     // Count pills: 1-10
-    for(let i=1;i<=30;i++){
+    for(let i=1;i<=50;i++){
       const p = document.createElement('div');
       p.className = 'num-pill' + (i===5?' active':'');
       p.textContent = i;
@@ -1248,6 +1248,7 @@ textarea{
   }
 
   addQuestionBtn.addEventListener('click',()=>{
+    if(customQuestions.length >= 50) return showToast('最多 50 道题目');
     syncCustomEditor();
     customQuestions.push(getDefaultQuestion('choice'));
     renderCustomEditor();
@@ -1354,7 +1355,7 @@ textarea{
         timeoutId = setTimeout(() => {
           timeoutController.abort();
           reject(new DOMException('请求超时', 'TimeoutError'));
-        }, engine === 'doubao' ? 240000 : (questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
+        }, engine === 'doubao' ? 240000 : (questionCount >= 30 ? 300000 : questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
       });
       const res = await Promise.race([
         timeoutPromise,
@@ -2157,7 +2158,7 @@ ${answerInfo}
         timeoutId = setTimeout(() => {
           timeoutController.abort();
           reject(new DOMException('请求超时', 'TimeoutError'));
-        }, engine === 'doubao' ? 240000 : (questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
+        }, engine === 'doubao' ? 240000 : (questionCount >= 30 ? 300000 : questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
       });
 
       // Race: fetch + stream read vs timeout
