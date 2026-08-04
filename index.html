@@ -807,6 +807,7 @@ textarea{
     <div id="resultReviews"></div>
     <button class="btn-primary" id="retryBtn" style="margin-top:8px">再来一轮</button>
     <button class="btn-secondary" id="copyJsonBtn" style="margin-top:5px;display:block;margin-left:auto;margin-right:auto">📋 复制题目 JSON</button>
+    <button class="btn-secondary" id="downloadJsonBtn" style="margin-top:5px;display:block;margin-left:auto;margin-right:auto">💾 下载题目 JSON</button>
   </div>
 </div>
 
@@ -864,6 +865,7 @@ textarea{
   const importBtn = $('importBtn');
   const importFile = $('importFile');
   const copyJsonBtn = $('copyJsonBtn');
+  const downloadJsonBtn = $('downloadJsonBtn');
   const difficultyGroup = $('difficultyGroup');
   const countGroup = $('countGroup');
   const allowTextCb = $('allowTextQuestions');
@@ -1090,6 +1092,22 @@ textarea{
         document.body.removeChild(ta);
         showToast('已复制', 'success');
       });
+    });
+
+    // Download JSON
+    downloadJsonBtn.addEventListener('click', ()=>{
+      if(!questions.length) return showToast('没有题目可下载');
+      const json = JSON.stringify(questions, null, 2);
+      const blob = new Blob([json], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'flashcard-questions.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('题目 JSON 已下载', 'success');
     });
   }
 
