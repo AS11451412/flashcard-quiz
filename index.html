@@ -800,6 +800,10 @@ textarea{
     </div>
     <div id="quizQuestions"></div>
     <button class="btn-primary" id="submitBtn">提交全部答案</button>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
+      <button class="btn-secondary" id="quizCopyJsonBtn">📋 复制 JSON</button>
+      <button class="btn-secondary" id="quizDownloadJsonBtn">💾 下载 JSON</button>
+    </div>
   </div>
 
   <!-- ===== RESULTS PAGE ===== -->
@@ -814,6 +818,8 @@ textarea{
   <!-- ===== CUSTOM EDITOR PAGE ===== -->
   <div class="page" id="customPage">
     <button class="back-btn" id="backFromCustom">← 返回设置</button>
+    <button class="btn-secondary" id="customImportBtn" style="float:right;margin-top:4px">📥 导入 JSON</button>
+    <input type="file" id="customImportFile" accept=".json" style="display:none">
     <h3 style="text-align:center;margin:16px 0 4px;color:var(--text)">自定义题目</h3>
     <p style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">手动添加选择题、多选题或填空题</p>
     <div id="customEditor"></div>
@@ -1300,6 +1306,61 @@ textarea{
   });
 
   $('backFromCustom').addEventListener('click',()=> showPage('setup'));
+
+  // Editor import JSON
+  const customImportBtn = $('customImportBtn');
+  const customImportFile = $('customImportFile');
+  customImportBtn.addEventListener('click',async ()=>{
+    let parsed = null;
+    // Try clipboard first
+    try{
+      const text = await navigator.clipboard.readText();
+      parsed = JSON.parse(text);
+      if(!Array.isArray(parsed) || parsed.length === 0) parsed = null;
+    }catch(e){}
+    if(parsed){
+      customQuestions = parsed.map(q=>({...q}));
+      renderCustomEditor();
+      showToast('已从剪贴板导入 ' + customQuestions.length + ' 题', 'success');
+      return;
+    }
+    customImportFile.click();
+  });
+  customImportFile.addEventListener('change',(e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      try{
+        const parsed = JSON.parse(ev.target.result);
+        if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('empty');
+        customQuestions = parsed.map(q=>({...q}));
+        renderCustomEditor();
+        showToast('已导入 ' + customQuestions.length + ' 题', 'success');
+      }catch(err){ showToast('JSON 无效'); }
+    };
+    reader.readAsText(file);
+    customImportFile.value = '';
+  });
+
+  // Quiz page copy/download
+  function copyOrDownloadQuestions(action){
+    if(!questions.length) return showToast('没有题目');
+    const json = JSON.stringify(questions, null, 2);
+    if(action === 'copy'){
+      navigator.clipboard.writeText(json).then(()=>showToast('已复制', 'success')).catch(()=>showToast('复制失败'));
+    }else{
+      const blob = new Blob([json],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'flashcard-questions.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('已下载', 'success');
+    }
+  }
+  $('quizCopyJsonBtn').addEventListener('click',()=>copyOrDownloadQuestions('copy'));
+  $('quizDownloadJsonBtn').addEventListener('click',()=>copyOrDownloadQuestions('download'));
 
   // === Show page ===
   function showPage(name){
