@@ -1031,7 +1031,7 @@ textarea{
         dlgBody.textContent = '未能从剪贴板读取有效题目 JSON，请选择文件导入：';
         dlgClipBtn.style.display = 'none';
       }
-      importDialog.classList.add('show');
+      importDialog.style.display = 'flex';
     });
 
     document.getElementById('dlgClipboard').addEventListener('click',()=>{
@@ -1040,14 +1040,14 @@ textarea{
         applyQuestions(pendingClipboard);
         showToast('已从剪贴板导入 ' + pendingClipboard.length + ' 道题目', 'success');
       }catch(e){ showToast('JSON 格式无效：'+e.message); }
-      importDialog.classList.remove('show');
+      importDialog.style.display = 'none';
     });
     document.getElementById('dlgFile').addEventListener('click',()=>{
-      importDialog.classList.remove('show');
+      importDialog.style.display = 'none';
       importFile.click();
     });
     document.getElementById('dlgCancel').addEventListener('click',()=>{
-      importDialog.classList.remove('show');
+      importDialog.style.display = 'none';
     });
 
     // File import handler
