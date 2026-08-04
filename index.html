@@ -641,6 +641,44 @@ textarea{
 }
 .toast.success{background:var(--green)}
 @keyframes toastIn{to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+.dialog-overlay{
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.dialog-overlay.show{display:flex}
+.dialog-box{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.dialog-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px}
+.dialog-body{font-size:14px;color:var(--text2);margin-bottom:20px}
+.dialog-btns{display:flex;flex-direction:column;gap:8px}
+.dialog-btn{
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  transition: all 0.2s;
+  text-align: center;
+}
+.dialog-btn:hover{border-color:var(--accent);color:var(--accent)}
+.dialog-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.dialog-btn.primary:hover{background:var(--accent2)}
+.dialog-btn.ghost{border:none;background:transparent;color:var(--text3);font-size:13px}
 @keyframes toastOut{to{opacity:0;transform:translateX(-50%) translateY(-10px)}}
 .toast{transform:translateX(-50%) translateY(-10px)}
 
@@ -785,6 +823,19 @@ textarea{
 
 <!-- Toast -->
 <div class="toast" id="toast" style="display:none"></div>
+
+<!-- Import dialog -->
+<div class="dialog-overlay" id="importDialog" style="display:none">
+  <div class="dialog-box">
+    <div class="dialog-title">检测到剪贴板 JSON</div>
+    <div class="dialog-body" id="dialogBody">从剪贴板读取到题目数据，请选择导入方式：</div>
+    <div class="dialog-btns">
+      <button class="dialog-btn primary" id="dlgClipboard">📋 使用剪贴板</button>
+      <button class="dialog-btn" id="dlgFile">📂 选择文件</button>
+      <button class="dialog-btn ghost" id="dlgCancel">取消</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -937,66 +988,60 @@ textarea{
     const savedDoubao = localStorage.getItem('fc_doubao_key');
     if(savedDoubao){ doubaoKeyInput.value = savedDoubao; saveDoubaoKeyCb.checked = true; }
 
-    // Import JSON
     // Import JSON: clipboard first, fallback to file
+    let pendingClipboard = null;
+    const importDialog = document.getElementById('importDialog');
+    const dlgBody = document.getElementById('dialogBody');
+
+    function applyQuestions(parsed){
+      parsed.forEach((q,i)=>{
+        if(!q.type) q.type = 'choice';
+        if(q.type === 'choice'){
+          if(!Array.isArray(q.options)||q.options.length!==5||typeof q.correctIndex!=='number')
+            throw new Error(`第${i+1}题格式有误`);
+        }else if(q.type === 'multi'){
+          if(!Array.isArray(q.options)||q.options.length!==6||!Array.isArray(q.correctIndexes)||q.correctIndexes.length!==2)
+            throw new Error(`第${i+1}题格式有误`);
+        }else if(q.type === 'text'){
+          if(!q.referenceAnswer) throw new Error(`第${i+1}题缺少referenceAnswer`);
+        }
+      });
+      questions = parsed;
+      userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
+      followUpAsked = questions.map(() => false);
+      renderQuiz();
+      showPage('quiz');
+    }
+
     importBtn.addEventListener('click',async ()=>{
+      pendingClipboard = null;
       try{
         const text = await navigator.clipboard.readText();
         const parsed = JSON.parse(text);
-        if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('不是有效题目数组');
-        // Validate
-        parsed.forEach((q,i)=>{
-          if(!q.type) q.type = 'choice';
-          if(q.type === 'choice')
-            { if(!Array.isArray(q.options)||q.options.length!==5||typeof q.correctIndex!=='number') throw new Error(`第${i+1}题格式有误`); }
-          else if(q.type === 'multi')
-            { if(!Array.isArray(q.options)||q.options.length!==6||!Array.isArray(q.correctIndexes)||q.correctIndexes.length!==2) throw new Error(`第${i+1}题格式有误`); }
-          else if(q.type === 'text')
-            { if(!q.referenceAnswer) throw new Error(`第${i+1}题缺少referenceAnswer`); }
-        });
-        questions = parsed;
-        userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
-        followUpAsked = questions.map(() => false);
-        renderQuiz();
-        showPage('quiz');
-        showToast('已从剪贴板导入 ' + questions.length + ' 道题目', 'success');
-        return;
+        if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('empty');
+        applyQuestions(parsed); // quick-validate
+        pendingClipboard = parsed;
+        dlgBody.textContent = '剪贴板中检测到 ' + parsed.length + ' 道题目，请选择导入方式：';
+        importDialog.classList.add('show');
       }catch(e){
-        // Clipboard failed → fallback to file
         importFile.click();
       }
     });
-    importFile.addEventListener('change', (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev)=>{
-        try{
-          const parsed = JSON.parse(ev.target.result);
-          if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('数组为空');
-          parsed.forEach((q,i)=>{
-            if(!q.type) q.type = 'choice';
-            if(q.type === 'choice'){
-              if(!Array.isArray(q.options) || q.options.length !== 5 || typeof q.correctIndex !== 'number')
-                throw new Error(`第${i+1}题格式有误`);
-            }else if(q.type === 'multi'){
-              if(!Array.isArray(q.options) || q.options.length !== 6 || !Array.isArray(q.correctIndexes) || q.correctIndexes.length !== 2)
-                throw new Error(`第${i+1}题格式有误`);
-            }else if(q.type === 'text'){
-              if(!q.referenceAnswer) throw new Error(`第${i+1}题缺少referenceAnswer`);
-            }
-          });
-          questions = parsed;
-          userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
-          followUpAsked = questions.map(() => false);
-          renderQuiz();
-          showPage('quiz');
-        }catch(err){
-          showToast('JSON 格式无效：' + err.message);
-        }
-      };
-      reader.readAsText(file);
-      importFile.value = '';
+
+    document.getElementById('dlgClipboard').addEventListener('click',()=>{
+      if(!pendingClipboard) return;
+      try{
+        applyQuestions(pendingClipboard);
+        showToast('已从剪贴板导入 ' + pendingClipboard.length + ' 道题目', 'success');
+      }catch(e){ showToast('JSON 格式无效：'+e.message); }
+      importDialog.classList.remove('show');
+    });
+    document.getElementById('dlgFile').addEventListener('click',()=>{
+      importDialog.classList.remove('show');
+      importFile.click();
+    });
+    document.getElementById('dlgCancel').addEventListener('click',()=>{
+      importDialog.classList.remove('show');
     });
 
     // Copy JSON
