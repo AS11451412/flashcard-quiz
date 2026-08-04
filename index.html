@@ -1171,9 +1171,9 @@ textarea{
     customEditor.querySelectorAll('.qtype-sel').forEach(sel=>{
       sel.addEventListener('change',()=>{
         const qi = parseInt(sel.dataset.qi);
-        const oldType = customQuestions[qi].type;
+        // Sync current inputs before switching
+        syncCustomEditor();
         const savedOpts = [...(customQuestions[qi].options || [])];
-        const savedAnswer = customQuestions[qi].referenceAnswer || '';
         customQuestions[qi].type = sel.value;
         if(sel.value === 'text'){
           customQuestions[qi].referenceAnswer = customQuestions[qi].referenceAnswer || '';
