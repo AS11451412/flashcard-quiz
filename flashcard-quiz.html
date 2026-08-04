@@ -1588,7 +1588,7 @@ textarea{
       wrongRedoResult.innerHTML += `<div style="font-size:13px;color:var(--text3);margin-top:6px">💡 ${escapeHtml(q.explanation)}</div>`;
     }
     // Show follow-up section
-    $('wrongFuWrap').style.display = '';
+    $('wrongFuWrap').style.display = 'block';
   });
 
   // Wrong redo follow-up
@@ -1638,7 +1638,7 @@ ${answerInfo}
     inp.disabled = false;
     $('wrongFuSend').disabled = false;
     inp.value = '';
-    $('wrongFuWrap').style.display = '';
+    $('wrongFuWrap').style.display = 'block';
   });
 
   // Wrong book navigation
