@@ -1161,7 +1161,7 @@ textarea{
             </div>
           `).join('')}
         `}
-        <input type="text" class="q-input" data-qi="${qi}" data-field="explanation" value="${escapeHtml(q.explanation||'')}" placeholder="简短解释（可选）" style="display:block;width:100%;padding:6px 8px;border-radius:4px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);margin-top:6px;font-size:12px;box-sizing:border-box">
+        <input type="text" class="q-input" data-qi="${qi}" data-field="explanation" value="${escapeHtml(q.explanation||'')}" placeholder="该题的简短解释（可选）" style="display:block;width:100%;padding:6px 8px;border-radius:4px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);margin-top:6px;font-size:12px;box-sizing:border-box">
       </div>`;
     });
     customEditor.innerHTML = html;
@@ -1171,20 +1171,20 @@ textarea{
       sel.addEventListener('change',()=>{
         const qi = parseInt(sel.dataset.qi);
         const oldType = customQuestions[qi].type;
+        const savedOpts = [...(customQuestions[qi].options || [])];
+        const savedAnswer = customQuestions[qi].referenceAnswer || '';
         customQuestions[qi].type = sel.value;
         if(sel.value === 'text'){
           customQuestions[qi].referenceAnswer = customQuestions[qi].referenceAnswer || '';
         }else if(sel.value === 'multi'){
           customQuestions[qi].options = Array(6).fill('');
           customQuestions[qi].correctIndexes = [];
+          // Restore options from previous type
+          for(let i=0;i<Math.min(savedOpts.length,6);i++) customQuestions[qi].options[i] = savedOpts[i]||'';
         }else{
           customQuestions[qi].options = Array(5).fill('');
           customQuestions[qi].correctIndex = null;
-        }
-        // Copy over existing option values
-        if(oldType === 'choice' || oldType === 'multi'){
-          const oldOpts = customQuestions[qi].options || [];
-          customQuestions[qi].options = customQuestions[qi].options.map((_,i)=>oldOpts[i]||'');
+          for(let i=0;i<Math.min(savedOpts.length,5);i++) customQuestions[qi].options[i] = savedOpts[i]||'';
         }
         renderCustomEditor();
       });
