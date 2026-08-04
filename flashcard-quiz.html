@@ -910,7 +910,7 @@ textarea{
 <!-- Import dialog -->
 <div class="dialog-overlay" id="importDialog" style="display:none">
   <div class="dialog-box">
-    <div class="dialog-title">检测到剪贴板 JSON</div>
+    <div class="dialog-title" id="dlgTitle">请选择导入方式</div>
     <div class="dialog-body" id="dialogBody">从剪贴板读取到题目数据，请选择导入方式：</div>
     <div class="dialog-btns">
       <button class="dialog-btn primary" id="dlgClipboard">📋 使用剪贴板</button>
@@ -1077,6 +1077,7 @@ textarea{
     let pendingClipboard = null;
     const importDialog = document.getElementById('importDialog');
     const dlgBody = document.getElementById('dialogBody');
+    const dlgTitle = document.getElementById('dlgTitle');
 
     function applyQuestions(parsed){
       parsed.forEach((q,i)=>{
@@ -1118,9 +1119,11 @@ textarea{
         });
         pendingClipboard = parsed;
         dlgBody.textContent = '剪贴板中检测到 ' + parsed.length + ' 道题目，请选择导入方式：';
+        dlgTitle.textContent = '检测到剪贴板 JSON';
         dlgClipBtn.style.display = '';
       }catch(e){
         dlgBody.textContent = '未能从剪贴板读取有效题目 JSON，请选择文件导入：';
+        dlgTitle.textContent = '请选择文件';
         dlgClipBtn.style.display = 'none';
       }
       importDialog.style.display = 'flex';
