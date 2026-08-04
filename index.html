@@ -2076,6 +2076,10 @@ correctIndex 从 0 开始，correctIndexes 是恰好含 2 个索引的数组。
         });
       });
 
+      // Hide copy/download on hard difficulty
+      copyJsonBtn.style.display = (difficulty === 'hard') ? 'none' : '';
+      downloadJsonBtn.style.display = (difficulty === 'hard') ? 'none' : '';
+
       showPage('results');
     } catch (e) {
       if(e.name === 'TimeoutError'){
