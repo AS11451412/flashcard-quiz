@@ -937,7 +937,34 @@ textarea{
     if(savedDoubao){ doubaoKeyInput.value = savedDoubao; saveDoubaoKeyCb.checked = true; }
 
     // Import JSON
-    importBtn.addEventListener('click',()=> importFile.click());
+    // Import JSON: clipboard first, fallback to file
+    importBtn.addEventListener('click',async ()=>{
+      try{
+        const text = await navigator.clipboard.readText();
+        const parsed = JSON.parse(text);
+        if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('不是有效题目数组');
+        // Validate
+        parsed.forEach((q,i)=>{
+          if(!q.type) q.type = 'choice';
+          if(q.type === 'choice')
+            { if(!Array.isArray(q.options)||q.options.length!==5||typeof q.correctIndex!=='number') throw new Error(`第${i+1}题格式有误`); }
+          else if(q.type === 'multi')
+            { if(!Array.isArray(q.options)||q.options.length!==6||!Array.isArray(q.correctIndexes)||q.correctIndexes.length!==2) throw new Error(`第${i+1}题格式有误`); }
+          else if(q.type === 'text')
+            { if(!q.referenceAnswer) throw new Error(`第${i+1}题缺少referenceAnswer`); }
+        });
+        questions = parsed;
+        userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
+        followUpAsked = questions.map(() => false);
+        renderQuiz();
+        showPage('quiz');
+        showToast('已从剪贴板导入 ' + questions.length + ' 道题目');
+        return;
+      }catch(e){
+        // Clipboard failed → fallback to file
+        importFile.click();
+      }
+    });
     importFile.addEventListener('change', (e)=>{
       const file = e.target.files[0];
       if(!file) return;
