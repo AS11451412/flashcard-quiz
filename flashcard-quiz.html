@@ -1541,23 +1541,8 @@ textarea{
       });
     }
 
-    // Inject follow-up button (pre-submission too)
-    wrongRedoResult.innerHTML = `<div style="text-align:left">
-      <button class="fu-ask-btn" id="wrongFuBtn">💬 追问</button>
-      <div class="fu-chat" id="wrongFuChat" style="display:none;margin-top:8px">
-        <div class="fu-input-row">
-          <input type="text" id="wrongFuInput" placeholder="输入你想追问的问题…" maxlength="300">
-          <button class="fu-send-btn" id="wrongFuSend">发送</button>
-        </div>
-        <div class="fu-user-q" id="wrongFuUser" style="display:none"></div>
-        <div class="fu-ai-r" id="wrongFuAi" style="display:none"></div>
-      </div>
-    </div>`;
-    document.getElementById('wrongFuBtn')?.addEventListener('click',()=>{
-      const chat = document.getElementById('wrongFuChat');
-      chat.style.display = chat.style.display === 'block' ? 'none' : 'block';
-    });
-    document.getElementById('wrongFuSend')?.addEventListener('click', wrongFuSendHandler);
+    // Show follow-up button
+    $('wrongFuBtn').style.display = 'inline-flex';
     showPage('wrongRedo');
   }
 
@@ -1600,24 +1585,6 @@ textarea{
     if(q.explanation){
       wrongRedoResult.innerHTML += `<div style="font-size:13px;color:var(--text3);margin-top:6px">💡 ${escapeHtml(q.explanation)}</div>`;
     }
-    // Append follow-up button to result
-    wrongRedoResult.innerHTML += `<div style="margin-top:10px">
-      <button class="fu-ask-btn" id="wrongFuBtn">💬 追问</button>
-      <div class="fu-chat" id="wrongFuChat" style="display:none;margin-top:8px">
-        <div class="fu-input-row">
-          <input type="text" id="wrongFuInput" placeholder="输入你想追问的问题…" maxlength="300">
-          <button class="fu-send-btn" id="wrongFuSend">发送</button>
-        </div>
-        <div class="fu-user-q" id="wrongFuUser" style="display:none"></div>
-        <div class="fu-ai-r" id="wrongFuAi" style="display:none"></div>
-      </div>
-    </div>`;
-    // Re-attach event handlers
-    document.getElementById('wrongFuBtn')?.addEventListener('click',()=>{
-      const chat = document.getElementById('wrongFuChat');
-      chat.style.display = chat.style.display === 'block' ? 'none' : 'block';
-    });
-    document.getElementById('wrongFuSend')?.addEventListener('click', wrongFuSendHandler);
   });
 
   // Wrong redo follow-up
