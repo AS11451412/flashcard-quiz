@@ -1013,8 +1013,12 @@ textarea{
       showPage('quiz');
     }
 
+    const dlgClipBtn = document.getElementById('dlgClipboard');
+    const dlgFileBtn = document.getElementById('dlgFile');
+
     importBtn.addEventListener('click',async ()=>{
       pendingClipboard = null;
+      // Try clipboard first
       try{
         const text = await navigator.clipboard.readText();
         const parsed = JSON.parse(text);
@@ -1022,10 +1026,12 @@ textarea{
         applyQuestions(parsed); // quick-validate
         pendingClipboard = parsed;
         dlgBody.textContent = '剪贴板中检测到 ' + parsed.length + ' 道题目，请选择导入方式：';
-        importDialog.classList.add('show');
+        dlgClipBtn.style.display = '';
       }catch(e){
-        importFile.click();
+        dlgBody.textContent = '未能从剪贴板读取有效题目 JSON，请选择文件导入：';
+        dlgClipBtn.style.display = 'none';
       }
+      importDialog.classList.add('show');
     });
 
     document.getElementById('dlgClipboard').addEventListener('click',()=>{
