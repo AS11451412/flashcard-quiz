@@ -1023,7 +1023,13 @@ textarea{
         const text = await navigator.clipboard.readText();
         const parsed = JSON.parse(text);
         if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('empty');
-        applyQuestions(parsed); // quick-validate
+        // Quick-validate without rendering
+        parsed.forEach((q,i)=>{
+          if(!q.type) q.type = 'choice';
+          if(q.type==='choice'){ if(!Array.isArray(q.options)||q.options.length!==5||typeof q.correctIndex!=='number') throw new Error(`第${i+1}题格式有误`); }
+          else if(q.type==='multi'){ if(!Array.isArray(q.options)||q.options.length!==6||!Array.isArray(q.correctIndexes)||q.correctIndexes.length!==2) throw new Error(`第${i+1}题格式有误`); }
+          else if(q.type==='text'){ if(!q.referenceAnswer) throw new Error(`第${i+1}题缺少referenceAnswer`); }
+        });
         pendingClipboard = parsed;
         dlgBody.textContent = '剪贴板中检测到 ' + parsed.length + ' 道题目，请选择导入方式：';
         dlgClipBtn.style.display = '';
