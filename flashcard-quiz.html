@@ -322,17 +322,19 @@ textarea{
   margin-bottom: 20px;
   padding: 0 4px;
 }
-.quiz-header .back-btn{
+.back-btn{
   background: none;
-  border: none;
+  border: 1px solid var(--border);
   color: var(--text2);
   cursor: pointer;
   font-size: 14px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 6px;
   transition: all 0.2s;
+  margin-bottom: 8px;
 }
-.quiz-header .back-btn:hover{background: var(--surface2);color: var(--text)}
+.back-btn:hover{background: var(--surface2);color: var(--text);border-color:var(--accent)}
+.quiz-header .back-btn{border:none;margin-bottom:0}
 .quiz-progress{
   font-size: 14px;
   color: var(--text2);
