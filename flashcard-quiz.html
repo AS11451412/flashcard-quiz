@@ -866,6 +866,17 @@ textarea{
     <h3 style="text-align:center;margin:16px 0;color:var(--text)">错题重做</h3>
     <div id="wrongRedoContent"></div>
     <button class="btn-primary" id="wrongRedoSubmit" style="display:block;margin:16px auto">提交</button>
+    <div class="followup-wrap" id="wrongFuWrap" style="display:none">
+      <button class="fu-ask-btn" id="wrongFuBtn">💬 追问</button>
+      <div class="fu-chat" id="wrongFuChat">
+        <div class="fu-input-row">
+          <input type="text" id="wrongFuInput" placeholder="输入你想追问的问题…" maxlength="300">
+          <button class="fu-send-btn" id="wrongFuSend">发送</button>
+        </div>
+        <div class="fu-user-q" id="wrongFuUser" style="display:none"></div>
+        <div class="fu-ai-r" id="wrongFuAi" style="display:none"></div>
+      </div>
+    </div>
     <div id="wrongRedoResult" style="text-align:center;margin-top:12px"></div>
   </div>
 
@@ -1480,14 +1491,16 @@ textarea{
     wrongRedoIndex = index;
     wrongRedoAnswer = null;
     wrongRedoResult.innerHTML = '';
+    $('wrongFuWrap').style.display = 'none';
+    $('wrongFuChat').style.display = 'none';
     const q = wrongBook[index];
     let html = '';
     if(q.type === 'text'){
-      html += `<div class="q-card"><div class="q-number">第 1 题 <span class="q-type-badge text">填空题</span></div>
+      html += `<div class="q-card"><div class="q-number"><span class="q-type-badge text">填空题</span></div>
         <div class="q-text">${escapeHtml(q.question)}</div>
         <div class="text-answer-area"><textarea id="wrongRedoInput" placeholder="输入你的答案…"></textarea></div></div>`;
     }else{
-      html += `<div class="q-card"><div class="q-number">第 1 题 ${q.type==='multi'?'<span class="q-type-badge text" style="background:rgba(167,139,250,0.15);color:#a78bfa">多选题</span>':''}</div>
+      html += `<div class="q-card"><div class="q-number">${q.type==='multi'?'<span class="q-type-badge text" style="background:rgba(167,139,250,0.15);color:#a78bfa">多选题</span>':'单选题'}</div>
         <div class="q-text">${escapeHtml(q.question)}</div>`;
       if(q.type==='multi'){
         html += '<div class="multi-hint">请选择恰好 2 个正确选项</div>';
@@ -1572,6 +1585,58 @@ textarea{
     if(q.explanation){
       wrongRedoResult.innerHTML += `<div style="font-size:13px;color:var(--text3);margin-top:6px">💡 ${escapeHtml(q.explanation)}</div>`;
     }
+    // Show follow-up section
+    $('wrongFuWrap').style.display = '';
+  });
+
+  // Wrong redo follow-up
+  $('wrongFuBtn').addEventListener('click',()=>{
+    const chat = $('wrongFuChat');
+    chat.style.display = chat.style.display === 'block' ? 'none' : 'block';
+  });
+  $('wrongFuSend').addEventListener('click', async ()=>{
+    const inp = $('wrongFuInput');
+    const userQuery = inp.value.trim();
+    if(!userQuery) return;
+    inp.disabled = true;
+    $('wrongFuSend').disabled = true;
+    const q = wrongBook[wrongRedoIndex];
+    if(!q) return;
+
+    const userEl = $('wrongFuUser');
+    const aiEl = $('wrongFuAi');
+    userEl.innerHTML = `<div class="fu-label">你的追问</div>${escapeHtml(userQuery)}`;
+    userEl.style.display = 'block';
+    aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span class="cursor-blink"></span>`;
+    aiEl.style.display = 'block';
+
+    let contentBuf = '';
+    const answerInfo = q.type==='text'
+      ? `参考答案：${q.referenceAnswer}`
+      : q.type==='multi'
+        ? `选项：${q.options.map((o,i)=>String.fromCharCode(65+i)+'. '+o).join('；')}\n正确答案：${q.correctIndexes.map(ci=>String.fromCharCode(65+ci)+'. '+q.options[ci]).join('、')}`
+        : `选项：${q.options.map((o,i)=>String.fromCharCode(65+i)+'. '+o).join('；')}\n正确答案：${String.fromCharCode(65+q.correctIndex)}. ${q.options[q.correctIndex]}`;
+
+    const systemPrompt = `你是一个耐心助教。用户正在重做错题，追问时你可以直接告诉正确答案并解释。
+题目：${q.question}
+${answerInfo}
+规则：通俗易懂地解释，回答精简在200字以内。必须使用中文回复。`;
+
+    try{
+      if(!currentAbort) currentAbort = new AbortController();
+      await streamDeepSeek(systemPrompt, userQuery,
+        ()=>{},
+        (chunk)=>{ contentBuf += chunk; aiEl.innerHTML = `<div class="fu-label">AI 回复</div>${escapeHtml(contentBuf)}<span class="cursor-blink"></span>`; }
+      );
+      aiEl.innerHTML = `<div class="fu-label">AI 回复</div>${escapeHtml(contentBuf)}`;
+    }catch(e){
+      if(e.name==='TimeoutError') aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">追问超时</span>`;
+      else if(e.name!=='AbortError') aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">请求失败</span>`;
+    }
+    inp.disabled = false;
+    $('wrongFuSend').disabled = false;
+    inp.value = '';
+    $('wrongFuWrap').style.display = '';
   });
 
   // Wrong book navigation
