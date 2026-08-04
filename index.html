@@ -1079,7 +1079,7 @@ textarea{
       if(!questions.length) return showToast('没有题目可复制');
       const json = JSON.stringify(questions, null, 2);
       navigator.clipboard.writeText(json).then(()=>{
-        showToast('题目 JSON 已复制到剪贴板');
+        showToast('题目 JSON 已复制到剪贴板', 'success');
       }).catch(()=>{
         // Fallback
         const ta = document.createElement('textarea');
@@ -1088,7 +1088,7 @@ textarea{
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        showToast('已复制');
+        showToast('已复制', 'success');
       });
     });
   }
