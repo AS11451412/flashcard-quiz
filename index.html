@@ -1110,7 +1110,7 @@ textarea{
         if (total < 5) return 1;
         return Math.floor(total / 5) * 2;
       };
-      const multiCount = (allowMultiCb.checked && questionCount >= 3) ? 2 : 0;
+      const multiCount = (allowMultiCb.checked && questionCount >= 3) ? (questionCount >= 21 ? 4 : 2) : 0;
       const remainingCount = questionCount - multiCount;
       const textCount = (difficulty !== 'easy' && allowTextCb.checked) ? calcTextCount(remainingCount) : 0;
       const choiceCount = remainingCount - textCount;
