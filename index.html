@@ -1596,6 +1596,7 @@ textarea{
     chat.style.display = chat.style.display === 'block' ? 'none' : 'block';
   });
   $('wrongFuSend').addEventListener('click', async ()=>{
+    console.log('🔍 错题本追问触发');
     const inp = $('wrongFuInput');
     const userQuery = inp.value.trim();
     if(!userQuery) return;
@@ -1622,6 +1623,7 @@ textarea{
 题目：${q.question}
 ${answerInfo}
 规则：通俗易懂地解释，回答精简在200字以内。必须使用中文回复。`;
+    console.log('📝 错题本追问 systemPrompt:', systemPrompt.substring(0,100)+'...');
 
     try{
       if(!currentAbort) currentAbort = new AbortController();
@@ -1634,8 +1636,6 @@ ${answerInfo}
       if(e.name==='TimeoutError') aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">追问超时</span>`;
       else if(e.name!=='AbortError') aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">请求失败</span>`;
     }
-    inp.disabled = false;
-    $('wrongFuSend').disabled = false;
     inp.value = '';
   });
 
