@@ -836,7 +836,7 @@ textarea{
     });
 
     // Count pills: 1-10
-    for(let i=1;i<=20;i++){
+    for(let i=1;i<=30;i++){
       const p = document.createElement('div');
       p.className = 'num-pill' + (i===5?' active':'');
       p.textContent = i;
@@ -878,6 +878,27 @@ textarea{
         engine = p.dataset.engine;
         deepseekKeyCard.style.display = (engine === 'deepseek') ? '' : 'none';
         doubaoKeyCard.style.display = (engine === 'doubao') ? '' : 'none';
+        // Doubao max=20; if count>20, auto-reduce
+        if(engine === 'doubao' && questionCount > 20){
+          questionCount = 20;
+          countLabel.textContent = 20;
+          countGroup.querySelectorAll('.num-pill').forEach(x=>x.classList.remove('active'));
+          countGroup.querySelector('.num-pill[data-n="20"]')?.classList.add('active');
+        }
+        // Update pill visibility
+        countGroup.querySelectorAll('.num-pill').forEach(x=>{
+          const n = parseInt(x.dataset.n);
+          if(engine === 'doubao' && n > 20){
+            x.style.opacity = '0.3';
+            x.style.pointerEvents = 'none';
+          } else {
+            x.style.opacity = '';
+            x.style.pointerEvents = '';
+          }
+        });
+        // Disable multi if count < 3
+        if(questionCount < 3){ allowMultiCb.disabled = true; multiLabel.style.opacity = '0.5'; }
+        else { allowMultiCb.disabled = false; multiLabel.style.opacity = ''; }
       });
     });
 
@@ -961,7 +982,7 @@ textarea{
         timeoutId = setTimeout(() => {
           timeoutController.abort();
           reject(new DOMException('请求超时', 'TimeoutError'));
-        }, engine === 'doubao' ? 240000 : (questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
+        }, engine === 'doubao' ? 240000 : (questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
       });
       const res = await Promise.race([
         timeoutPromise,
@@ -1762,7 +1783,7 @@ ${answerInfo}
         timeoutId = setTimeout(() => {
           timeoutController.abort();
           reject(new DOMException('请求超时', 'TimeoutError'));
-        }, engine === 'doubao' ? 240000 : (questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
+        }, engine === 'doubao' ? 240000 : (questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
       });
 
       // Race: fetch + stream read vs timeout
