@@ -1171,21 +1171,23 @@ textarea{
     customEditor.querySelectorAll('.qtype-sel').forEach(sel=>{
       sel.addEventListener('change',()=>{
         const qi = parseInt(sel.dataset.qi);
-        // Sync current inputs before switching
         syncCustomEditor();
-        const savedOpts = [...(customQuestions[qi].options || [])];
-        customQuestions[qi].type = sel.value;
-        if(sel.value === 'text'){
-          customQuestions[qi].referenceAnswer = customQuestions[qi].referenceAnswer || '';
-        }else if(sel.value === 'multi'){
-          customQuestions[qi].options = Array(6).fill('');
-          customQuestions[qi].correctIndexes = [];
-          // Restore options from previous type
-          for(let i=0;i<Math.min(savedOpts.length,6);i++) customQuestions[qi].options[i] = savedOpts[i]||'';
+        const q = customQuestions[qi];
+        const oldType = q.type;
+        // Persist: save current type's data to its slot
+        if(oldType === 'choice'){ q._choiceOpts = [...(q.options||[])]; q._choiceCorrect = q.correctIndex; }
+        else if(oldType === 'multi'){ q._multiOpts = [...(q.options||[])]; q._multiCorrect = [...(q.correctIndexes||[])]; }
+        else if(oldType === 'text'){ q._textAnswer = q.referenceAnswer||''; }
+        q.type = sel.value;
+        // Restore: load new type's data from its saved slot
+        if(q.type === 'choice'){
+          q.options = (q._choiceOpts?.length===5) ? [...q._choiceOpts] : Array(5).fill('');
+          q.correctIndex = (q._choiceCorrect != null) ? q._choiceCorrect : null;
+        }else if(q.type === 'multi'){
+          q.options = (q._multiOpts?.length===6) ? [...q._multiOpts] : Array(6).fill('');
+          q.correctIndexes = (q._multiCorrect?.length===2) ? [...q._multiCorrect] : [];
         }else{
-          customQuestions[qi].options = Array(5).fill('');
-          customQuestions[qi].correctIndex = null;
-          for(let i=0;i<Math.min(savedOpts.length,5);i++) customQuestions[qi].options[i] = savedOpts[i]||'';
+          q.referenceAnswer = q._textAnswer || '';
         }
         renderCustomEditor();
       });
