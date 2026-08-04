@@ -787,6 +787,7 @@ textarea{
     <button class="btn-primary" id="generateBtn">AI 生成题目</button>
     <div style="margin-top:10px;display:flex;gap:10px;justify-content:center">
       <button class="btn-secondary" id="importBtn">📥 导入 JSON</button>
+      <button class="btn-secondary" id="customBtn">✏️ 自定义题目</button>
       <input type="file" id="importFile" accept=".json" style="display:none">
     </div>
   </div>
@@ -808,6 +809,16 @@ textarea{
     <button class="btn-primary" id="retryBtn" style="margin-top:8px">再来一轮</button>
     <button class="btn-secondary" id="copyJsonBtn" style="margin-top:5px;display:block;margin-left:auto;margin-right:auto">📋 复制题目 JSON</button>
     <button class="btn-secondary" id="downloadJsonBtn" style="margin-top:5px;display:block;margin-left:auto;margin-right:auto">💾 下载题目 JSON</button>
+  </div>
+
+  <!-- ===== CUSTOM EDITOR PAGE ===== -->
+  <div class="page" id="customPage">
+    <button class="back-btn" id="backFromCustom">← 返回设置</button>
+    <h3 style="text-align:center;margin:16px 0 4px;color:var(--text)">自定义题目</h3>
+    <p style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">手动添加选择题、多选题或填空题</p>
+    <div id="customEditor"></div>
+    <button class="btn-secondary" id="addQuestionBtn" style="display:block;margin:12px auto">+ 添加题目</button>
+    <button class="btn-primary" id="finishCustomBtn" style="display:block;margin:12px auto">✅ 完成编辑，开始答题</button>
   </div>
 </div>
 
@@ -1113,12 +1124,173 @@ textarea{
     });
   }
 
+  // === Custom Editor ===
+  let customQuestions = [];
+  const customPage = $('customPage');
+  const customEditor = $('customEditor');
+  const addQuestionBtn = $('addQuestionBtn');
+  const finishCustomBtn = $('finishCustomBtn');
+
+  function renderCustomEditor(){
+    let html = '';
+    customQuestions.forEach((q, qi)=>{
+      const isMulti = q.type === 'multi';
+      const isText = q.type === 'text';
+      html += `<div class="review-card" style="margin-bottom:12px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-weight:600;color:var(--accent)">第 ${qi+1} 题</span>
+          <div style="display:flex;gap:6px">
+            <select class="qtype-sel" data-qi="${qi}" style="padding:4px 8px;border-radius:4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);font-size:12px">
+              <option value="choice" ${q.type==='choice'?'selected':''}>单选题</option>
+              <option value="multi" ${isMulti?'selected':''}>多选题（六选二）</option>
+              <option value="text" ${isText?'selected':''}>填空题</option>
+            </select>
+            <button class="del-q-btn" data-qi="${qi}" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:14px" title="删除">🗑</button>
+          </div>
+        </div>
+        <input type="text" class="q-input" data-qi="${qi}" data-field="question" value="${escapeHtml(q.question||'')}" placeholder="输入题目…" style="display:block;width:100%;padding:8px;border-radius:4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-bottom:8px;font-size:13px;box-sizing:border-box">
+        ${isText ? `
+          <input type="text" class="q-input" data-qi="${qi}" data-field="referenceAnswer" value="${escapeHtml(q.referenceAnswer||'')}" placeholder="参考答案（短词/数字/短语）" style="display:block;width:100%;padding:8px;border-radius:4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);margin-bottom:4px;font-size:13px;box-sizing:border-box">
+        ` : `
+          <div style="font-size:12px;color:var(--text3);margin-bottom:4px">${isMulti ? '6 个选项，按顺序填写（勾选 = 正确答案）' : '5 个选项，按顺序填写（勾选 = 正确答案）'}</div>
+          ${Array.from({length: isMulti?6:5}, (_, oi)=>`
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <input type="${isMulti?'checkbox':'radio'}" name="correct-${qi}" class="q-input" data-qi="${qi}" data-field="correct" data-oi="${oi}" ${isMulti ? (q.correctIndexes?.includes(oi)?'checked':'') : (q.correctIndex===oi?'checked':'')} style="width:auto;accent-color:var(--accent)">
+              <span style="font-size:12px;color:var(--text3);width:20px">${String.fromCharCode(65+oi)}</span>
+              <input type="text" class="q-input" data-qi="${qi}" data-field="option" data-oi="${oi}" value="${escapeHtml(q.options?.[oi]||'')}" placeholder="选项 ${String.fromCharCode(65+oi)}" style="flex:1;padding:6px 8px;border-radius:4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);font-size:13px;box-sizing:border-box">
+            </div>
+          `).join('')}
+        `}
+        <input type="text" class="q-input" data-qi="${qi}" data-field="explanation" value="${escapeHtml(q.explanation||'')}" placeholder="简短解释（可选）" style="display:block;width:100%;padding:6px 8px;border-radius:4px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);margin-top:6px;font-size:12px;box-sizing:border-box">
+      </div>`;
+    });
+    customEditor.innerHTML = html;
+
+    // Type change handlers
+    customEditor.querySelectorAll('.qtype-sel').forEach(sel=>{
+      sel.addEventListener('change',()=>{
+        const qi = parseInt(sel.dataset.qi);
+        const oldType = customQuestions[qi].type;
+        customQuestions[qi].type = sel.value;
+        if(sel.value === 'text'){
+          customQuestions[qi].referenceAnswer = customQuestions[qi].referenceAnswer || '';
+        }else if(sel.value === 'multi'){
+          customQuestions[qi].options = Array(6).fill('');
+          customQuestions[qi].correctIndexes = [];
+        }else{
+          customQuestions[qi].options = Array(5).fill('');
+          customQuestions[qi].correctIndex = null;
+        }
+        // Copy over existing option values
+        if(oldType === 'choice' || oldType === 'multi'){
+          const oldOpts = customQuestions[qi].options || [];
+          customQuestions[qi].options = customQuestions[qi].options.map((_,i)=>oldOpts[i]||'');
+        }
+        renderCustomEditor();
+      });
+    });
+
+    // Delete handlers
+    customEditor.querySelectorAll('.del-q-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const qi = parseInt(btn.dataset.qi);
+        customQuestions.splice(qi, 1);
+        renderCustomEditor();
+      });
+    });
+  }
+
+  // Sync inputs back to model
+  function syncCustomEditor(){
+    customEditor.querySelectorAll('.q-input:not([type="radio"]):not([type="checkbox"])').forEach(inp=>{
+      const qi = parseInt(inp.dataset.qi);
+      const field = inp.dataset.field;
+      const oi = parseInt(inp.dataset.oi);
+      if(field === 'option'){
+        if(!customQuestions[qi].options) customQuestions[qi].options = [];
+        customQuestions[qi].options[oi] = inp.value;
+      }else if(field === 'correctIndex'){
+        customQuestions[qi].correctIndex = parseInt(inp.value);
+      }else{
+        customQuestions[qi][field] = inp.value;
+      }
+    });
+    // Sync correctIndexes for multi
+    customEditor.querySelectorAll('input[type="checkbox"][data-field="correct"]').forEach(cb=>{
+      const qi = parseInt(cb.dataset.qi);
+      const oi = parseInt(cb.dataset.oi);
+      if(!customQuestions[qi].correctIndexes) customQuestions[qi].correctIndexes = [];
+      if(cb.checked && !customQuestions[qi].correctIndexes.includes(oi))
+        customQuestions[qi].correctIndexes.push(oi);
+      if(!cb.checked)
+        customQuestions[qi].correctIndexes = customQuestions[qi].correctIndexes.filter(x=>x!==oi);
+    });
+    // Sync correctIndex for single choice
+    customEditor.querySelectorAll('input[type="radio"][data-field="correct"]:checked').forEach(rb=>{
+      const qi = parseInt(rb.dataset.qi);
+      const oi = parseInt(rb.dataset.oi);
+      customQuestions[qi].correctIndex = oi;
+    });
+  }
+
+  $('customBtn').addEventListener('click',()=>{
+    customQuestions = [getDefaultQuestion('choice')];
+    renderCustomEditor();
+    showPage('custom');
+  });
+
+  function getDefaultQuestion(type='choice'){
+    const q = {type, question:'', explanation:''};
+    if(type === 'text'){ q.referenceAnswer = ''; }
+    else if(type === 'multi'){ q.options = Array(6).fill(''); q.correctIndexes = []; }
+    else { q.options = Array(5).fill(''); q.correctIndex = null; }
+    return q;
+  }
+
+  addQuestionBtn.addEventListener('click',()=>{
+    syncCustomEditor();
+    customQuestions.push(getDefaultQuestion('choice'));
+    renderCustomEditor();
+  });
+
+  finishCustomBtn.addEventListener('click',()=>{
+    syncCustomEditor();
+    // Validate
+    if(customQuestions.length === 0) return showToast('请至少添加一道题目');
+    for(let i=0;i<customQuestions.length;i++){
+      const q = customQuestions[i];
+      if(!q.question.trim()) return showToast(`第 ${i+1} 题的题目不能为空`);
+      if(q.type === 'text'){
+        if(!q.referenceAnswer?.trim()) return showToast(`第 ${i+1} 题缺少参考答案`);
+      }else{
+        const opts = q.options || [];
+        const empty = opts.some(o=>!o?.trim());
+        if(empty) return showToast(`第 ${i+1} 题的选项不能为空`);
+        if(q.type === 'multi'){
+          if(!q.correctIndexes || q.correctIndexes.length !== 2) return showToast(`第 ${i+1} 题必须选恰好 2 个正确答案`);
+        }else{
+          if(typeof q.correctIndex !== 'number' || q.correctIndex < 0) return showToast(`第 ${i+1} 题必须选 1 个正确答案`);
+        }
+      }
+    }
+    // All good
+    questions = customQuestions.map(q=>({...q}));
+    jsonImported = true;
+    userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
+    followUpAsked = questions.map(() => false);
+    renderQuiz();
+    showPage('quiz');
+  });
+
+  $('backFromCustom').addEventListener('click',()=> showPage('setup'));
+
   // === Show page ===
   function showPage(name){
-    [setupPage, quizPage, resultsPage].forEach(p=>p.classList.remove('active'));
+    [setupPage, quizPage, resultsPage, customPage].forEach(p=>p.classList.remove('active'));
     if(name==='setup') setupPage.classList.add('active');
     if(name==='quiz') quizPage.classList.add('active');
     if(name==='results') resultsPage.classList.add('active');
+    if(name==='custom') customPage.classList.add('active');
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
