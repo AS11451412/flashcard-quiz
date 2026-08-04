@@ -201,6 +201,21 @@ textarea{
   transform: none;
   box-shadow: none;
 }
+.btn-secondary{
+  display: inline-block;
+  padding: 8px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-secondary:hover{
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 /* Loading */
 .loading-overlay{
@@ -731,6 +746,10 @@ textarea{
     </div>
 
     <button class="btn-primary" id="generateBtn">AI 生成题目</button>
+    <div style="margin-top:10px;display:flex;gap:10px;justify-content:center">
+      <button class="btn-secondary" id="importBtn">📥 导入 JSON</button>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+    </div>
   </div>
 
   <!-- ===== QUIZ PAGE ===== -->
@@ -748,6 +767,7 @@ textarea{
     <div class="result-summary" id="resultSummary"></div>
     <div id="resultReviews"></div>
     <button class="btn-primary" id="retryBtn" style="margin-top:8px">再来一轮</button>
+    <button class="btn-secondary" id="copyJsonBtn" style="margin-top:5px;display:block;margin-left:auto;margin-right:auto">📋 复制题目 JSON</button>
   </div>
 </div>
 
@@ -789,6 +809,9 @@ textarea{
   const toast = $('toast');
   const livePanel = $('livePanel');
   const liveContent = $('liveContent');
+  const importBtn = $('importBtn');
+  const importFile = $('importFile');
+  const copyJsonBtn = $('copyJsonBtn');
   const difficultyGroup = $('difficultyGroup');
   const countGroup = $('countGroup');
   const allowTextCb = $('allowTextQuestions');
@@ -912,6 +935,59 @@ textarea{
     // Load saved Doubao key
     const savedDoubao = localStorage.getItem('fc_doubao_key');
     if(savedDoubao){ doubaoKeyInput.value = savedDoubao; saveDoubaoKeyCb.checked = true; }
+
+    // Import JSON
+    importBtn.addEventListener('click',()=> importFile.click());
+    importFile.addEventListener('change', (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev)=>{
+        try{
+          const parsed = JSON.parse(ev.target.result);
+          if(!Array.isArray(parsed) || parsed.length === 0) throw new Error('数组为空');
+          parsed.forEach((q,i)=>{
+            if(!q.type) q.type = 'choice';
+            if(q.type === 'choice'){
+              if(!Array.isArray(q.options) || q.options.length !== 5 || typeof q.correctIndex !== 'number')
+                throw new Error(`第${i+1}题格式有误`);
+            }else if(q.type === 'multi'){
+              if(!Array.isArray(q.options) || q.options.length !== 6 || !Array.isArray(q.correctIndexes) || q.correctIndexes.length !== 2)
+                throw new Error(`第${i+1}题格式有误`);
+            }else if(q.type === 'text'){
+              if(!q.referenceAnswer) throw new Error(`第${i+1}题缺少referenceAnswer`);
+            }
+          });
+          questions = parsed;
+          userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
+          followUpAsked = questions.map(() => false);
+          renderQuiz();
+          showPage('quiz');
+        }catch(err){
+          showToast('JSON 格式无效：' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      importFile.value = '';
+    });
+
+    // Copy JSON
+    copyJsonBtn.addEventListener('click', ()=>{
+      if(!questions.length) return showToast('没有题目可复制');
+      const json = JSON.stringify(questions, null, 2);
+      navigator.clipboard.writeText(json).then(()=>{
+        showToast('题目 JSON 已复制到剪贴板');
+      }).catch(()=>{
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = json;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('已复制');
+      });
+    });
   }
 
   // === Show page ===
