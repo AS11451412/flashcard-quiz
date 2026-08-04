@@ -800,6 +800,10 @@ textarea{
     </div>
     <div id="quizQuestions"></div>
     <button class="btn-primary" id="submitBtn">提交全部答案</button>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:8px" id="quizJsonBtns">
+      <button class="btn-secondary" id="quizCopyJsonBtn">📋 复制 JSON</button>
+      <button class="btn-secondary" id="quizDownloadJsonBtn">💾 下载 JSON</button>
+    </div>
   </div>
 
   <!-- ===== RESULTS PAGE ===== -->
@@ -1339,6 +1343,25 @@ textarea{
     customImportFile.value = '';
   });
 
+  // Quiz page copy/download
+  function copyOrDownloadQuestions(action){
+    if(!questions.length) return showToast('没有题目');
+    const json = JSON.stringify(questions, null, 2);
+    if(action === 'copy'){
+      navigator.clipboard.writeText(json).then(()=>showToast('已复制', 'success')).catch(()=>showToast('复制失败'));
+    }else{
+      const blob = new Blob([json],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'flashcard-questions.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('已下载', 'success');
+    }
+  }
+  $('quizCopyJsonBtn').addEventListener('click',()=>copyOrDownloadQuestions('copy'));
+  $('quizDownloadJsonBtn').addEventListener('click',()=>copyOrDownloadQuestions('download'));
+
   // === Show page ===
   function showPage(name){
     [setupPage, quizPage, resultsPage, customPage].forEach(p=>p.classList.remove('active'));
@@ -1666,6 +1689,7 @@ correctIndex 从 0 开始，correctIndexes 是恰好含 2 个索引的数组。
   function renderQuiz(){
     quizCount.textContent = questions.length;
     $('importedBadge').style.display = jsonImported ? '' : 'none';
+    $('quizJsonBtns').style.display = (difficulty === 'hard') ? 'none' : '';
     let html = '';
     questions.forEach((q, qi)=>{
       const isText = q.type === 'text';
