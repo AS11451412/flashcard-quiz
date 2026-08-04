@@ -795,7 +795,7 @@ textarea{
   <div class="page" id="quizPage">
     <div class="quiz-header">
       <button class="back-btn" id="backToSetup">← 返回修改</button>
-      <div class="quiz-progress">共 <span id="quizCount">0</span> 道题目</div>
+      <div class="quiz-progress"><span id="importedBadge" style="display:none;margin-right:8px;background:var(--accent);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px">此闪卡为导入 JSON</span>共 <span id="quizCount">0</span> 道题目</div>
     </div>
     <div id="quizQuestions"></div>
     <button class="btn-primary" id="submitBtn">提交全部答案</button>
@@ -886,7 +886,8 @@ textarea{
   let userAnswers = [];
   let followUpAsked = [];
   let currentAbort = null;
-  let engine = 'deepseek'; // 'deepseek' or 'doubao' // track current request for cancellation
+  let engine = 'deepseek';
+  let jsonImported = false; // tracks if questions came from JSON import // 'deepseek' or 'doubao' // track current request for cancellation
 
   // === Init ===
   function init(){
@@ -1009,6 +1010,7 @@ textarea{
         }
       });
       questions = parsed;
+      jsonImported = true;
       userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
       followUpAsked = questions.map(() => false);
       renderQuiz();
@@ -1381,6 +1383,7 @@ correctIndex 从 0 开始，correctIndexes 是恰好含 2 个索引的数组。
       });
 
       questions = parsed.slice(0, questionCount);
+      jsonImported = false;
       userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
       followUpAsked = questions.map(() => false);
 
@@ -1435,6 +1438,7 @@ correctIndex 从 0 开始，correctIndexes 是恰好含 2 个索引的数组。
   // === Render Quiz ===
   function renderQuiz(){
     quizCount.textContent = questions.length;
+    $('importedBadge').style.display = jsonImported ? '' : 'none';
     let html = '';
     questions.forEach((q, qi)=>{
       const isText = q.type === 'text';
