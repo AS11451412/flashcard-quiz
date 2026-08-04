@@ -1636,6 +1636,13 @@ ${answerInfo}
       if(e.name==='TimeoutError') aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">追问超时</span>`;
       else if(e.name!=='AbortError') aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">请求失败</span>`;
     }
+    // One-time: lock button, hide chat
+    const fuBtn = $('wrongFuBtn');
+    fuBtn.textContent = '已追问';
+    fuBtn.disabled = true;
+    fuBtn.style.opacity = '0.5';
+    $('wrongFuChat').style.display = 'none';
+    wrongRedoResult.innerHTML += '<div style="color:var(--text3);font-size:12px;margin-top:4px">追问次数已用尽，刷新可重新追问</div>';
     inp.value = '';
   });
 
