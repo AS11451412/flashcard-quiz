@@ -2009,11 +2009,6 @@ ${qList}`;
         throw new Error('AI 输出格式异常，原始长度：'+(raw||'').length+' 字，找到 '+(worked||[]).length+' 题');
       }
       featuredQuestions = worked;
-      // Save original wrongBook indices for removal later
-      featuredQuestions.forEach(fq=>{
-        const idx = wrongBook.findIndex(wb=>wb.question===fq.question);
-        if(idx>=0) fq._wrongIdx = idx;
-      });
       saveWrongBook();
 
       // Setup quiz state
@@ -2125,12 +2120,18 @@ ${qList}`;
       if(isCorrect) score++;
       featuredAnswers[qi]._isCorrect = isCorrect;
     }
-    // Remove correctly answered: remove by saved wrongBook index immediately
+    // Remove correctly answered: match by answer/text
     const toRemove = [];
     featuredQuestions.forEach((q,qi)=>{
-      if(featuredAnswers[qi]._isCorrect && q._wrongIdx != null){
-        toRemove.push(q._wrongIdx);
-      }
+      if(!featuredAnswers[qi]._isCorrect) return;
+      // Find matching wrongBook entry by common answer
+      const wIdx = wrongBook.findIndex(wb=>{
+        if(wb.type!==q.type) return false;
+        if(wb.type==='text') return (wb.referenceAnswer||'').toLowerCase()===(q.referenceAnswer||'').toLowerCase();
+        if(wb.type==='multi') return (wb.correctIndexes||[]).sort().join(',')===(q.correctIndexes||[]).sort().join(',');
+        return wb.correctIndex===q.correctIndex;
+      });
+      if(wIdx>=0) toRemove.push(wIdx);
     });
     toRemove.sort((a,b)=>b-a).forEach(idx=>wrongBook.splice(idx,1));
     saveWrongBook();
