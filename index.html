@@ -938,6 +938,7 @@ textarea{
     <div class="dialog-title">选择思考强度</div>
     <div class="dialog-body" style="text-align:center">
       <button class="dialog-btn" id="reasonHigh" style="background:var(--accent);margin:4px">🧠 高强度思考 (High)</button>
+      <button class="dialog-btn" id="reasonMax" style="margin:4px">🔥 极限思考 (Max)</button>
       <button class="dialog-btn" id="reasonMedium" style="margin:4px">⚡ 中强度思考 (Medium)</button>
       <button class="dialog-btn" id="reasonLow" style="margin:4px">💨 低强度思考 (Low)</button>
       <button class="dialog-btn" id="reasonNone" style="margin:4px">🚫 不思考</button>
@@ -1738,6 +1739,11 @@ ${answerInfo}
       if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','high');
       dlg.style.display = 'none';
       startFeaturedAnalysis('high');
+    };
+    document.getElementById('reasonMax').onclick = ()=>{
+      if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','max');
+      dlg.style.display = 'none';
+      startFeaturedAnalysis('max');
     };
     document.getElementById('reasonMedium').onclick = ()=>{
       if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','medium');
