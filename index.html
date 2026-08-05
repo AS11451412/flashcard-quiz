@@ -1730,14 +1730,14 @@ ${qList}`;
 
     try{
       const apiKey = apiKeyInput.value.trim() || '';
-      const timeoutMs = 80000;
+      const timeoutMs = 120000;
       const abortCtrl = new AbortController();
       const timeout = setTimeout(()=>abortCtrl.abort(), timeoutMs);
 
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:'medium',max_tokens:16384,stream:false}),
+        body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:'high',max_tokens:100000,stream:false}),
         signal: abortCtrl.signal
       });
       clearTimeout(timeout);
