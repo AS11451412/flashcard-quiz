@@ -1753,33 +1753,39 @@ ${qList}`;
       console.log('%c📝 错题精选输出：','color:#2ecc71');
       console.log(raw);
 
-      // Parse JSONL (one JSON object per line) or JSON array
-      let rawLines = raw.trim();
-      // Strip markdown fences
-      rawLines = rawLines.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
-      // Try JSONL first
-      const lines = rawLines.split('\n').map(l=>l.trim()).filter(l=>l.startsWith('{')&&l.endsWith('}'));
-      if(lines.length >= 7){
-        featuredQuestions = lines.map(l=>{
-          try{ return JSON.parse(l); }
-          catch(e){ return null; }
-        }).filter(Boolean);
+      // Parse output: try array first, then JSONL
+      let cleaned = raw.trim();
+      // Strip fences
+      cleaned = cleaned.replace(/```(?:json)?\s*/g, '').replace(/```/g, '');
+      let worked = null;
+      // Try array
+      const arrMatch = cleaned.match(/\[([\s\S]*)\]/);
+      if(arrMatch){
+        try{ worked = JSON.parse('[' + arrMatch[1].replace(/,(\s*[}\]])/g, '$1') + ']'); }
+        catch(e){ console.warn('Array parse failed', e.message); }
       }
-      // Fallback to array parse
-      if(!featuredQuestions || featuredQuestions.length < 7){
-        const arr = rawLines.match(/\[[\s\S]*\]/);
-        if(arr){
-          try{
-            const fixed = arr[0].replace(/,(\s*[}\]])/g, '$1');
-            featuredQuestions = JSON.parse(fixed);
-          }catch(e){
-            featuredQuestions = null;
-          }
-        }
+      // Try JSONL
+      if(!worked || !Array.isArray(worked) || worked.length < 7){
+        const jlines = cleaned.split('\n')
+          .map(l=>l.trim()).filter(l=>l.startsWith('{'))
+          .map(l=>{ try{ return JSON.parse(l); }catch{ return null; } }).filter(Boolean);
+        if(jlines.length >= 7) worked = jlines;
       }
-      if(!Array.isArray(featuredQuestions) || featuredQuestions.length === 0) throw new Error('Invalid result');
+      // Final try: split on }{ boundary
+      if(!worked || !Array.isArray(worked) || worked.length < 7){
+        const flat = cleaned.replace(/\}\s*\{/g, '}\n{');
+        const flines = flat.split('\n')
+          .map(l=>l.trim()).filter(l=>l.startsWith('{'))
+          .map(l=>{ try{ return JSON.parse(l); }catch{ return null; } }).filter(Boolean);
+        if(flines.length >= 7) worked = flines;
+      }
 
-      // Remove correctly-answered questions from wrong book
+      if(!worked || !Array.isArray(worked) || worked.length === 0){
+        console.error('无法解析，原始输出：', raw);
+        throw new Error('AI 输出格式异常，请重试');
+      }
+      featuredQuestions = worked;
+      if(!Array.isArray(featuredQuestions) || featuredQuestions.length === 0) throw new Error('Invalid result');
       wrongBook = wrongBook.filter(wq => {
         return featuredQuestions.some(fq => fq.question === wq.question);
       });
