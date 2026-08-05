@@ -932,6 +932,22 @@ textarea{
   </div>
 </div>
 
+<!-- Reasoning effort dialog -->
+<div class="dialog-overlay" id="reasonDialog" style="display:none">
+  <div class="dialog-card">
+    <div class="dialog-title">选择思考强度</div>
+    <div class="dialog-body" style="text-align:center">
+      <button class="dialog-btn" id="reasonHigh" style="background:var(--accent);margin:6px">🧠 高强度思考 (High)</button>
+      <button class="dialog-btn" id="reasonMedium">⚡ 中强度思考 (Medium)</button>
+      <div style="margin-top:12px;font-size:13px;color:var(--text3)">
+        <label id="reasonAlwaysLabel" style="cursor:pointer">
+          <input type="checkbox" id="reasonAlways" style="vertical-align:middle"> 总是使用此强度
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   // === DOM refs ===
@@ -1695,8 +1711,33 @@ ${answerInfo}
     }
   }
 
-  featuredBtn.addEventListener('click', async ()=>{
+  featuredBtn.addEventListener('click', (e)=>{
     if(wrongBook.length < 10) return showToast('至少需要 10 道错题');
+    // Shift+click to ignore "always" preference
+    const saved = e.shiftKey ? null : localStorage.getItem('fc_reason_effort');
+    if(saved || e.shiftKey){
+      const effort = e.shiftKey ? (saved==='high'?'medium':'high') : saved;
+      startFeaturedAnalysis(effort, e.shiftKey);
+      return;
+    }
+    // Show dialog
+    const dlg = document.getElementById('reasonDialog');
+    dlg.style.display = 'flex';
+    document.getElementById('reasonAlways').checked = false;
+
+    document.getElementById('reasonHigh').onclick = ()=>{
+      if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','high');
+      dlg.style.display = 'none';
+      startFeaturedAnalysis('high');
+    };
+    document.getElementById('reasonMedium').onclick = ()=>{
+      if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','medium');
+      dlg.style.display = 'none';
+      startFeaturedAnalysis('medium');
+    };
+  });
+
+  async function startFeaturedAnalysis(effort, skipDialog){
     featuredQuiz.style.display = 'none';
     featuredFuUsed = false;
     showPage('featured');
@@ -1737,7 +1778,7 @@ ${qList}`;
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:'high',max_tokens:100000,stream:false}),
+        body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:effort,max_tokens:100000,stream:false}),
         signal: abortCtrl.signal
       });
       clearTimeout(timeout);
