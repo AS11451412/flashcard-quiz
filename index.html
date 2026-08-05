@@ -861,7 +861,8 @@ textarea{
     <div id="wrongBookList"></div>
     <p style="text-align:center;font-size:13px;color:var(--text3)" id="wrongBookEmpty">暂无错题</p>
     <button class="btn-primary" id="featuredBtn" style="display:block;margin:16px auto" disabled>🎯 错题精选（需 ≥ 10 题）</button>
-    <div style="text-align:center">
+    <div style="text-align:center;display:flex;gap:10px;justify-content:center">
+      <button class="btn-secondary" id="exportWrongPartial" style="display:none">📋 导出部分错题</button>
       <button class="btn-secondary" id="exportWrongXlsx" style="display:none">📊 导出 XLS</button>
     </div>
   </div>
@@ -1512,10 +1513,12 @@ textarea{
       wrongBookList.innerHTML = '';
       wrongBookEmpty.style.display = '';
       $('exportWrongXlsx').style.display = 'none';
+      $('exportWrongPartial').style.display = 'none';
       return;
     }
     wrongBookEmpty.style.display = 'none';
     $('exportWrongXlsx').style.display = 'inline-block';
+    $('exportWrongPartial').style.display = 'inline-block';
     let html = '';
     wrongBook.forEach((q,i)=>{
       const typeLabel = q.type==='multi'?'多选题':q.type==='text'?'填空题':'单选题';
@@ -1532,10 +1535,11 @@ textarea{
   }
 
   // XLSX export
-  function exportWrongBookXlsx(){
-    if(wrongBook.length === 0) return showToast('没有错题可导出');
+  function exportWrongBookXlsx(data){
+    const list = data || wrongBook;
+    if(list.length === 0) return showToast('没有错题可导出');
     // Build Excel XML (SpreadsheetML)
-    const rows = wrongBook.map((q,i)=>{
+    const rows = list.map((q,i)=>{
       const typeLabel = q.type==='multi'?'多选题':q.type==='text'?'填空题':'单选题';
       let answer = '';
       if(q.type==='text') answer = q.referenceAnswer || '';
@@ -1743,6 +1747,56 @@ ${answerInfo}
     showPage('wrongBook');
   });
   $('exportWrongXlsx').addEventListener('click',()=> exportWrongBookXlsx());
+  $('exportWrongPartial').addEventListener('click', (e)=>{
+    if(wrongBook.length === 0) return showToast('没有错题');
+    const inExportMode = $('exportWrongPartial').textContent === '📦 开始导出错题';
+    // Shift+click = cancel
+    if(e.shiftKey && inExportMode){
+      exitExportMode();
+      return;
+    }
+    if(!inExportMode){
+      // Enter export mode: add checkboxes
+      enterExportMode();
+    }else{
+      // Export selected
+      const selected = [];
+      wrongBookList.querySelectorAll('.wb-check:checked').forEach(cb=>{
+        selected.push(wrongBook[parseInt(cb.dataset.wbi)]);
+      });
+      if(selected.length === 0) return showToast('请至少勾选一道题');
+      exportWrongBookXlsx(selected);
+      exitExportMode();
+    }
+  });
+
+  function enterExportMode(){
+    const btn = $('exportWrongPartial');
+    btn.textContent = '📦 开始导出错题';
+    btn.style.background = 'var(--accent)';
+    btn.style.color = '#fff';
+    // Add checkboxes
+    wrongBookList.querySelectorAll('.wb-card').forEach((card,i)=>{
+      if(card.querySelector('.wb-check')) return;
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'wb-check';
+      cb.dataset.wbi = i;
+      cb.style.cssText = 'position:absolute;top:8px;right:8px;width:18px;height:18px;accent-color:var(--accent);cursor:pointer;z-index:1';
+      card.style.position = 'relative';
+      card.appendChild(cb);
+      // Prevent card click from triggering redo
+      cb.addEventListener('click', e=>{ e.stopPropagation(); });
+    });
+  }
+
+  function exitExportMode(){
+    const btn = $('exportWrongPartial');
+    btn.textContent = '📋 导出部分错题';
+    btn.style.background = '';
+    btn.style.color = '';
+    wrongBookList.querySelectorAll('.wb-check').forEach(cb=>cb.remove());
+  }
 
   $('backFromWrongBook').addEventListener('click',()=> showPage('setup'));
   $('backFromWrongRedo').addEventListener('click',()=>{
