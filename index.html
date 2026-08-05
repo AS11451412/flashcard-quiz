@@ -2009,6 +2009,11 @@ ${qList}`;
         throw new Error('AI 输出格式异常，原始长度：'+(raw||'').length+' 字，找到 '+(worked||[]).length+' 题');
       }
       featuredQuestions = worked;
+      // Save original wrongBook indices for removal later
+      featuredQuestions.forEach(fq=>{
+        const idx = wrongBook.findIndex(wb=>wb.question===fq.question);
+        if(idx>=0) fq._wrongIdx = idx;
+      });
       saveWrongBook();
 
       // Setup quiz state
@@ -2120,12 +2125,14 @@ ${qList}`;
       if(isCorrect) score++;
       featuredAnswers[qi]._isCorrect = isCorrect;
     }
-    // Remove correctly answered from wrong book
+    // Remove correctly answered: remove by saved wrongBook index immediately
+    const toRemove = [];
     featuredQuestions.forEach((q,qi)=>{
-      if(featuredAnswers[qi]._isCorrect){
-        wrongBook = wrongBook.filter(wb => wb.question !== q.question);
+      if(featuredAnswers[qi]._isCorrect && q._wrongIdx != null){
+        toRemove.push(q._wrongIdx);
       }
     });
+    toRemove.sort((a,b)=>b-a).forEach(idx=>wrongBook.splice(idx,1));
     saveWrongBook();
     $('featuredSubmit').disabled = true;
     $('featuredSubmit').textContent = '已提交';
