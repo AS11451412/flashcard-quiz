@@ -1732,7 +1732,7 @@ ${qList}
 只输出JSON数组：`;
 
     try{
-      const apiKey = currentApiKey || '';
+      const apiKey = apiKeyInput.value.trim() || '';
       const timeoutMs = 80000;
       const abortCtrl = new AbortController();
       const timeout = setTimeout(()=>abortCtrl.abort(), timeoutMs);
