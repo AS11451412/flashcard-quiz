@@ -1933,7 +1933,7 @@ ${qList}`;
       const timeout = setTimeout(()=>abortCtrl.abort(), timeoutMs);
 
         const body = effort === 'none'
-          ? {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],max_tokens:8192,stream:false}
+          ? {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],max_tokens:100000,stream:false}
           : {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:effort,max_tokens:100000,stream:false};
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method:'POST',
@@ -2004,7 +2004,6 @@ ${qList}`;
 
       if(!worked || worked.length < 7){
         console.error('❌ 所有解析策略失败，原始输出：', raw);
-        loadingOverlay.classList.remove('show');
         throw new Error('AI 输出格式异常，原始长度：'+(raw||'').length+' 字，找到 '+(worked||[]).length+' 题');
       }
       featuredQuestions = worked;
