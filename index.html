@@ -937,8 +937,10 @@ textarea{
   <div class="dialog-box">
     <div class="dialog-title">选择思考强度</div>
     <div class="dialog-body" style="text-align:center">
-      <button class="dialog-btn" id="reasonHigh" style="background:var(--accent);margin:6px">🧠 高强度思考 (High)</button>
-      <button class="dialog-btn" id="reasonMedium">⚡ 中强度思考 (Medium)</button>
+      <button class="dialog-btn" id="reasonHigh" style="background:var(--accent);margin:4px">🧠 高强度思考 (High)</button>
+      <button class="dialog-btn" id="reasonMedium" style="margin:4px">⚡ 中强度思考 (Medium)</button>
+      <button class="dialog-btn" id="reasonLow" style="margin:4px">💨 低强度思考 (Low)</button>
+      <button class="dialog-btn" id="reasonNone" style="margin:4px">🚫 不思考</button>
       <div style="margin-top:12px;font-size:13px;color:var(--text3)">
         <label id="reasonAlwaysLabel" style="cursor:pointer">
           <input type="checkbox" id="reasonAlways" style="vertical-align:middle"> 总是使用此强度
@@ -1742,6 +1744,16 @@ ${answerInfo}
       dlg.style.display = 'none';
       startFeaturedAnalysis('medium');
     };
+    document.getElementById('reasonLow').onclick = ()=>{
+      if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','low');
+      dlg.style.display = 'none';
+      startFeaturedAnalysis('low');
+    };
+    document.getElementById('reasonNone').onclick = ()=>{
+      if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','none');
+      dlg.style.display = 'none';
+      startFeaturedAnalysis('none');
+    };
   });
 
   async function startFeaturedAnalysis(effort, skipDialog){
@@ -1785,7 +1797,10 @@ ${qList}`;
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:effort,max_tokens:100000,stream:false}),
+        const body = effort === 'none'
+          ? {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],max_tokens:100000,stream:false}
+          : {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:effort,max_tokens:100000,stream:false};
+        body: JSON.stringify(body),
         signal: abortCtrl.signal
       });
       clearTimeout(timeout);
