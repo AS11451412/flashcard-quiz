@@ -2090,14 +2090,20 @@ ${qList}`;
             const judgeResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
               method:'POST',
               headers:{'Content-Type':'application/json','Authorization':'Bearer '+(apiKeyInput.value.trim()||'')},
-              body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:`判断以下填空题答案是否正确。只回答"对"或"错"一个字。\n题目：${q.question}\n参考答案：${q.referenceAnswer}\n用户答案：${ua}`}],thinking:{type:'enabled'},reasoning_effort:'high',max_tokens:10,stream:false}),
+              body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:`判断以下填空题答案是否正确。只回答"对"或"错"，并给出简短理由。\n题目：${q.question}\n参考答案：${q.referenceAnswer}\n用户答案：${ua}`}],thinking:{type:'enabled'},reasoning_effort:'high',max_tokens:200,stream:false}),
               signal: AbortSignal.timeout(30000)
             });
             if(judgeResp.ok){
               const jd = await judgeResp.json();
               const result = (jd.choices[0].message.content||'').trim();
-              isCorrect = result.startsWith('对');
-              console.log('%c📝 精选填空第'+(qi+1)+'题：AI评判="'+result+'" 用户="'+ua+'" 参考="'+q.referenceAnswer+'"','color:#f1c40f');
+              const reasoning = jd.choices[0].message.reasoning_content || '';
+              isCorrect = result.startsWith('对') || result.includes('正确');
+              featuredAnswers[qi]._judgeReason = result;
+              if(reasoning){
+                console.log('%c📝 精选填空第'+(qi+1)+'题推理：','color:#f39c12');
+                console.log(reasoning);
+              }
+              console.log('%c📝 精选填空第'+(qi+1)+'题：AI评判="'+(isCorrect?'对':'错')+'" 用户="'+ua+'" 参考="'+q.referenceAnswer+'"','color:'+(isCorrect?'#2ecc71':'#e74c3c'));
             }
           }catch(e){ console.warn('%c📝 精选填空第'+(qi+1)+'题评判失败，fallback比对: '+e.message,'color:#e74c3c'); }
         }
@@ -2143,7 +2149,8 @@ ${qList}`;
         <div style="margin:6px 0;color:var(--text)">${escapeHtml(q.question)}</div>`;
       if(q.type==='text'){
         rHtml += `<div style="font-size:13px;color:var(--text3)">你的回答：${escapeHtml(ans.textAnswer||'(空)')}</div>
-        <div style="font-size:13px;color:var(--green)">正确答案：${escapeHtml(q.referenceAnswer)}</div>`;
+        <div style="font-size:13px;color:var(--green)">正确答案：${escapeHtml(q.referenceAnswer||'')}</div>`;
+      if(ans._judgeReason) rHtml += `<div style="font-size:12px;color:${isCorrect?'var(--green)':'var(--red)'};margin-top:2px">🤖 ${escapeHtml(ans._judgeReason)}</div>`;
       }else{
         const userSel = q.type==='multi' ? (ans.selectedIndexes||[]).map(si=>String.fromCharCode(65+si)).join('、')||'未选' : (ans.selectedIndex!=null?String.fromCharCode(65+ans.selectedIndex):'未选');
         const correct = q.type==='multi' ? (q.correctIndexes||[]).map(ci=>String.fromCharCode(65+ci)).join('、') : String.fromCharCode(65+q.correctIndex);
