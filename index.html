@@ -859,6 +859,9 @@ textarea{
     <h3 style="text-align:center;margin:16px 0 4px;color:var(--text)">错题本</h3>
     <p style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">仅收录 AI 生成题目中的错题，需重新作答</p>
     <div id="wrongBookList"></div>
+    <div style="text-align:center;margin-top:10px">
+      <button class="btn-secondary" id="exportWrongXlsx" style="display:none">📊 导出 XLSX</button>
+    </div>
     <p style="text-align:center;font-size:13px;color:var(--text3)" id="wrongBookEmpty">暂无错题</p>
     <button class="btn-primary" id="featuredBtn" style="display:block;margin:16px auto" disabled>🎯 错题精选（需 ≥ 10 题）</button>
   </div>
@@ -1508,9 +1511,11 @@ textarea{
     if(wrongBook.length === 0){
       wrongBookList.innerHTML = '';
       wrongBookEmpty.style.display = '';
+      $('exportWrongXlsx').style.display = 'none';
       return;
     }
     wrongBookEmpty.style.display = 'none';
+    $('exportWrongXlsx').style.display = 'inline-block';
     let html = '';
     wrongBook.forEach((q,i)=>{
       const typeLabel = q.type==='multi'?'多选题':q.type==='text'?'填空题':'单选题';
@@ -1525,6 +1530,54 @@ textarea{
       card.addEventListener('click',()=> startWrongRedo(parseInt(card.dataset.wbi)));
     });
   }
+
+  // XLSX export
+  function exportWrongBookXlsx(){
+    if(wrongBook.length === 0) return showToast('没有错题可导出');
+    // Build Excel XML (SpreadsheetML)
+    const rows = wrongBook.map((q,i)=>{
+      const typeLabel = q.type==='multi'?'多选题':q.type==='text'?'填空题':'单选题';
+      let answer = '';
+      if(q.type==='text') answer = q.referenceAnswer || '';
+      else if(q.type==='multi') answer = (q.correctIndexes||[]).map(ci=>String.fromCharCode(65+ci)+'. '+q.options[ci]).join('、');
+      else answer = (q.correctIndex!=null) ? String.fromCharCode(65+q.correctIndex)+'. '+q.options[q.correctIndex] : '';
+      const options = (q.options||[]).map((o,i)=>String.fromCharCode(65+i)+'. '+o).join('\n');
+      return `<Row>
+        <Cell><Data ss:Type="Number">${i+1}</Data></Cell>
+        <Cell><Data ss:Type="String">${typeLabel}</Data></Cell>
+        <Cell><Data ss:Type="String">${escXml(q.question)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escXml(options)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escXml(answer)}</Data></Cell>
+        <Cell><Data ss:Type="String">${escXml(q.explanation||'')}</Data></Cell>
+      </Row>`;
+    }).join('');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="错题本">
+    <Table>
+      <Row>
+        <Cell><Data ss:Type="String">序号</Data></Cell>
+        <Cell><Data ss:Type="String">题型</Data></Cell>
+        <Cell><Data ss:Type="String">题目</Data></Cell>
+        <Cell><Data ss:Type="String">选项</Data></Cell>
+        <Cell><Data ss:Type="String">正确答案</Data></Cell>
+        <Cell><Data ss:Type="String">解释</Data></Cell>
+      </Row>
+${rows}
+    </Table>
+  </Worksheet>
+</Workbook>`;
+    const blob = new Blob(['\uFEFF'+xml], {type:'application/vnd.ms-excel'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = '错题本.xls';
+    a.click(); URL.revokeObjectURL(a.href);
+    showToast('已导出','success');
+  }
+
+  function escXml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   function startWrongRedo(index){
     wrongRedoIndex = index;
@@ -1689,6 +1742,8 @@ ${answerInfo}
     renderWrongBook();
     showPage('wrongBook');
   });
+  $('exportWrongXlsx').addEventListener('click',()=> exportWrongBookXlsx());
+
   $('backFromWrongBook').addEventListener('click',()=> showPage('setup'));
   $('backFromWrongRedo').addEventListener('click',()=>{
     renderWrongBook();
