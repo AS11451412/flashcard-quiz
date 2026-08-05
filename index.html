@@ -1710,7 +1710,7 @@ ${answerInfo}
   function updateFeaturedBtn(){
     if(engine !== 'deepseek'){
       featuredBtn.disabled = true;
-      featuredBtn.textContent = '错题精选，请切换到 DeepSeek 引擎';
+      featuredBtn.textContent = '错题精选（请切换到 DeepSeek 引擎）';
       return;
     }
     if(wrongBook.length >= 10){
