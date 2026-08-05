@@ -1875,9 +1875,6 @@ ${qList}`;
         throw new Error('AI 输出格式异常，原始长度：'+(raw||'').length+' 字，找到 '+(worked||[]).length+' 题');
       }
       featuredQuestions = worked;
-      wrongBook = wrongBook.filter(wq => {
-        return featuredQuestions.some(fq => fq.question === wq.question);
-      });
       saveWrongBook();
 
       // Setup quiz state
@@ -1962,6 +1959,13 @@ ${qList}`;
       if(isCorrect) score++;
       featuredAnswers[qi]._isCorrect = isCorrect;
     });
+    // Remove correctly answered from wrong book
+    featuredQuestions.forEach((q,qi)=>{
+      if(featuredAnswers[qi]._isCorrect){
+        wrongBook = wrongBook.filter(wb => wb.question !== q.question);
+      }
+    });
+    saveWrongBook();
     // Render results like normal quiz results
     let rHtml = '';
     const pct = Math.round(score/featuredQuestions.length*100);
