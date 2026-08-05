@@ -1934,7 +1934,7 @@ ${qList}`;
       const timeout = setTimeout(()=>abortCtrl.abort(), timeoutMs);
 
         const body = effort === 'none'
-          ? {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],max_tokens:100000,stream:false}
+          ? {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'disabled'},max_tokens:100000,stream:false}
           : {model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:effort,max_tokens:100000,stream:false};
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method:'POST',
