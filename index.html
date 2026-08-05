@@ -944,6 +944,7 @@ textarea{
           <input type="checkbox" id="reasonAlways" style="vertical-align:middle"> 总是使用此强度
         </label>
       </div>
+      <button class="dialog-btn ghost" id="reasonCancel" style="margin-top:10px">取消</button>
     </div>
   </div>
 </div>
@@ -1729,6 +1730,7 @@ ${answerInfo}
     const dlg = document.getElementById('reasonDialog');
     dlg.style.display = 'flex';
     document.getElementById('reasonAlways').checked = false;
+    document.getElementById('reasonCancel').onclick = ()=>{ dlg.style.display = 'none'; };
 
     document.getElementById('reasonHigh').onclick = ()=>{
       if(document.getElementById('reasonAlways').checked) localStorage.setItem('fc_reason_effort','high');
