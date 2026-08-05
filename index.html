@@ -1722,7 +1722,9 @@ ${answerInfo}
 
     const prompt = `你是一个出题专家。以下错题中，选出 10 道最需要巩固的题目，适当润色，并调整题型（包含适量填空题和多选题）。
 
-输出 JSON 数组，每项：{"type":"choice|multi|text","question":"..."${"",}"options":["A","B","C","D","E"${multi时6个,text不要此字段}],"correctIndex":0${"",}"correctIndexes":[0,1]${"",}"referenceAnswer":"..."${"",}"explanation":"简短解释"}。必须纯文本JSON
+输出 JSON 数组，每项格式：
+{"type":"choice|multi|text","question":"...","options":["A","B"...],(多选 6 个选项, 填空不需要选项),"correctIndex":0,(多选用 correctIndexes:[0,1], 填空用 referenceAnswer:"..."),"explanation":"简短解释"}
+必须纯文本 JSON 数组, 不要 markdown 代码块。
 
 错题：
 ${qList}
