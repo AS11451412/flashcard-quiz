@@ -2074,15 +2074,37 @@ ${qList}`;
   }
 
   // Submit featured quiz
-  $('featuredSubmit').addEventListener('click',()=>{
+  $('featuredSubmit').addEventListener('click', async ()=>{
+    $('featuredSubmit').disabled = true;
+    $('featuredSubmit').textContent = '评判中…';
     let score = 0;
-    featuredQuestions.forEach((q,qi)=>{
+    for(let qi = 0; qi < featuredQuestions.length; qi++){
+      const q = featuredQuestions[qi];
       const ans = featuredAnswers[qi];
       let isCorrect = false;
       if(q.type==='text'){
-        const inp = featuredCards.querySelector(`.ft-input[data-qi="${qi}"]`);
-        if(inp) featuredAnswers[qi].textAnswer = inp.value;
-        isCorrect = (featuredAnswers[qi].textAnswer||'').trim().toLowerCase() === (q.referenceAnswer||'').toLowerCase();
+        const ua = (ans.textAnswer||'').trim();
+        // AI judge with High thinking
+        if(ua && q.referenceAnswer){
+          try{
+            const judgeResp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+              method:'POST',
+              headers:{'Content-Type':'application/json','Authorization':'Bearer '+(apiKeyInput.value.trim()||'')},
+              body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:`判断以下填空题答案是否正确。只回答"对"或"错"一个字。\n题目：${q.question}\n参考答案：${q.referenceAnswer}\n用户答案：${ua}`}],thinking:{type:'enabled'},reasoning_effort:'high',max_tokens:10,stream:false}),
+              signal: AbortSignal.timeout(30000)
+            });
+            if(judgeResp.ok){
+              const jd = await judgeResp.json();
+              const result = (jd.choices[0].message.content||'').trim();
+              isCorrect = result.startsWith('对');
+              console.log('%c📝 精选填空第'+(qi+1)+'题评判：'+result+' 用户\"'+ua+'\" vs 参考\"'+q.referenceAnswer+'\"','color:#f1c40f');
+            }
+          }catch(e){ console.warn('评判失败，fallback比对', e.message); }
+        }
+        if(!ua){
+          isCorrect = false;
+        }
+        featuredAnswers[qi].textAnswer = ua;
       }else if(q.type==='multi'){
         const sel = [...(ans.selectedIndexes||[])].sort().join(',');
         const correct = [...(q.correctIndexes||[])].sort().join(',');
@@ -2092,7 +2114,7 @@ ${qList}`;
       }
       if(isCorrect) score++;
       featuredAnswers[qi]._isCorrect = isCorrect;
-    });
+    }
     // Remove correctly answered from wrong book
     featuredQuestions.forEach((q,qi)=>{
       if(featuredAnswers[qi]._isCorrect){
@@ -2100,6 +2122,8 @@ ${qList}`;
       }
     });
     saveWrongBook();
+    $('featuredSubmit').disabled = false;
+    $('featuredSubmit').textContent = '提交';
     // Render results like normal quiz results
     let rHtml = '';
     const pct = Math.round(score/featuredQuestions.length*100);
