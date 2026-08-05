@@ -1895,6 +1895,7 @@ ${answerInfo}
   }
 
   async function startFeaturedAnalysis(effort, skipDialog){
+    console.log('%c🚀 启动精选，effort='+effort,'color:#f39c12');
     featuredQuiz.style.display = 'none';
     featuredFuUsed = false;
     showPage('featured');
@@ -1941,6 +1942,7 @@ ${qList}`;
         body: JSON.stringify(body),
         signal: abortCtrl.signal
       });
+      console.log('%c🚀 发送 effort='+effort+' body keys: '+Object.keys(body).join(', '),'color:#f39c12');
       clearTimeout(timeout);
       if(!resp.ok) throw new Error('API '+resp.status);
 
