@@ -2097,9 +2097,9 @@ ${qList}`;
               const jd = await judgeResp.json();
               const result = (jd.choices[0].message.content||'').trim();
               isCorrect = result.startsWith('对');
-              console.log('%c📝 精选填空第'+(qi+1)+'题评判：'+result+' 用户\"'+ua+'\" vs 参考\"'+q.referenceAnswer+'\"','color:#f1c40f');
+              console.log('%c📝 精选填空第'+(qi+1)+'题：AI评判="'+result+'" 用户="'+ua+'" 参考="'+q.referenceAnswer+'"','color:#f1c40f');
             }
-          }catch(e){ console.warn('评判失败，fallback比对', e.message); }
+          }catch(e){ console.warn('%c📝 精选填空第'+(qi+1)+'题评判失败，fallback比对: '+e.message,'color:#e74c3c'); }
         }
         if(!ua){
           isCorrect = false;
@@ -2122,8 +2122,9 @@ ${qList}`;
       }
     });
     saveWrongBook();
-    $('featuredSubmit').disabled = false;
-    $('featuredSubmit').textContent = '提交';
+    $('featuredSubmit').disabled = true;
+    $('featuredSubmit').textContent = '已提交';
+    $('featuredSubmit').style.opacity = '0.5';
     // Render results like normal quiz results
     let rHtml = '';
     const pct = Math.round(score/featuredQuestions.length*100);
