@@ -1705,6 +1705,7 @@ ${rows}
         isCorrect = true;
       }else{
         // AI judge with current engine
+        console.log('%c🔍 错题重做评判：引擎='+engine+' 用户='+ua+' 参考='+(q.referenceAnswer||''),'color:#f39c12');
         $('wrongRedoSubmit').disabled = true;
         $('wrongRedoSubmit').textContent = '评判中…';
         isCorrect = await judgeTextAnswer(q.question, ua, q.referenceAnswer);
