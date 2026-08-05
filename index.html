@@ -1608,6 +1608,30 @@ ${rows}
 
   function escXml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  async function judgeTextAnswer(qText, ua, ref){
+    const isDoubao = engine === 'doubao';
+    const key = isDoubao ? (doubaoKeyInput.value.trim()||'') : (apiKeyInput.value.trim()||'');
+    const endpoint = isDoubao
+      ? 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
+      : 'https://api.deepseek.com/v1/chat/completions';
+    const model = isDoubao ? 'doubao-pro-256k-241115' : 'deepseek-v4-flash';
+    try{
+      const resp = await fetch(endpoint, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body: JSON.stringify({model,messages:[{role:'user',content:`判断以下填空题答案是否正确。只回答"对"或"错"。\n题目：${qText}\n参考答案：${ref}\n用户答案：${ua}`}],max_tokens:10,stream:false}),
+        signal: AbortSignal.timeout(30000)
+      });
+      if(!resp.ok) throw new Error('API '+resp.status);
+      const jd = await resp.json();
+      const result = (jd.choices[0].message.content||'').trim();
+      return result.startsWith('对') || result.includes('正确');
+    }catch(e){
+      console.warn('错题重做评判失败，fallback精确匹配', e.message);
+      return ua.toLowerCase() === (ref||'').toLowerCase();
+    }
+  }
+
   function startWrongRedo(index){
     wrongRedoIndex = index;
     wrongRedoAnswer = null;
@@ -1667,7 +1691,7 @@ ${rows}
     showPage('wrongRedo');
   }
 
-  $('wrongRedoSubmit').addEventListener('click',()=>{
+  $('wrongRedoSubmit').addEventListener('click', async ()=>{
     if(wrongRedoIndex < 0) return;
     const q = wrongBook[wrongRedoIndex];
     let isCorrect;
@@ -1676,7 +1700,17 @@ ${rows}
       if(!inp) return;
       const ua = inp.value.trim();
       if(!ua) return showToast('请输入答案');
-      isCorrect = ua.toLowerCase() === (q.referenceAnswer||'').toLowerCase();
+      // Exact match first
+      if(ua.toLowerCase() === (q.referenceAnswer||'').toLowerCase()){
+        isCorrect = true;
+      }else{
+        // AI judge with current engine
+        $('wrongRedoSubmit').disabled = true;
+        $('wrongRedoSubmit').textContent = '评判中…';
+        isCorrect = await judgeTextAnswer(q.question, ua, q.referenceAnswer);
+        $('wrongRedoSubmit').disabled = false;
+        $('wrongRedoSubmit').textContent = '提交';
+      }
       wrongRedoResult.innerHTML = isCorrect
         ? '<div style="color:var(--green);font-weight:700">✓ 回答正确！已从错题本移除</div>'
         : `<div style="color:var(--red)">✗ 回答错误。参考答案：${escapeHtml(q.referenceAnswer||'')}</div>`;
