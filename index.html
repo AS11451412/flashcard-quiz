@@ -1636,7 +1636,7 @@ ${rows}
         else if(/错/.test(reasoning.substring(reasoning.length-200))) result = '错';
       }
       const ok = result.startsWith('对') || result.includes('正确');
-      console.log('%c📝 错题重做评判结果：'+result+' => '+(ok?'对':'错'),'color:'+(ok?'#2ecc71':'#e74c3c'));
+      console.log('%c📝 错题重做评判：AI回答="'+result+'" → '+(ok?'正确':'错误'),'color:'+(ok?'#2ecc71':'#e74c3c'));
       return ok;
     }catch(e){
       console.warn('错题重做评判失败，fallback精确匹配', e.message);
