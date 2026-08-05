@@ -1713,13 +1713,18 @@ ${answerInfo}
 
   featuredBtn.addEventListener('click', (e)=>{
     if(wrongBook.length < 10) return showToast('至少需要 10 道错题');
-    // Shift+click to ignore "always" preference
-    const saved = e.shiftKey ? null : localStorage.getItem('fc_reason_effort');
-    if(saved || e.shiftKey){
-      const effort = e.shiftKey ? (saved==='high'?'medium':'high') : saved;
-      startFeaturedAnalysis(effort, e.shiftKey);
+    const saved = localStorage.getItem('fc_reason_effort');
+    // Shift+click: toggle "always" preference
+    if(e.shiftKey){
+      if(saved){
+        localStorage.removeItem('fc_reason_effort'); showToast('已取消记忆，下次弹窗选择','success');
+      }else{
+        showToast('当前未设置记忆，请直接选择', 'info');
+      }
       return;
     }
+    // If saved, use it directly
+    if(saved){ startFeaturedAnalysis(saved); return; }
     // Show dialog
     const dlg = document.getElementById('reasonDialog');
     dlg.style.display = 'flex';
