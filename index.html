@@ -860,6 +860,7 @@ textarea{
     <p style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">仅收录 AI 生成题目中的错题，需重新作答</p>
     <div id="wrongBookList"></div>
     <p style="text-align:center;font-size:13px;color:var(--text3)" id="wrongBookEmpty">暂无错题</p>
+    <button class="btn-primary" id="featuredBtn" style="display:block;margin:16px auto" disabled>🎯 错题精选（需 ≥ 10 题）</button>
   </div>
 
   <!-- ===== WRONG REDO PAGE ===== -->
@@ -878,6 +879,27 @@ textarea{
     </div>
     <button class="btn-primary" id="wrongRedoSubmit" style="display:block;margin:16px auto 0">提交</button>
     <div id="wrongRedoResult" style="text-align:center;margin-top:12px"></div>
+  </div>
+
+  <!-- ===== WRONG FEATURED PAGE ===== -->
+  <div class="page" id="featuredPage">
+    <button class="back-btn" id="backFromFeatured">← 返回错题本</button>
+    <h3 style="text-align:center;margin:16px 0;color:var(--text)">错题精选</h3>
+    <div id="featuredStatus" style="text-align:center;color:var(--text3);padding:20px"></div>
+    <div id="featuredQuiz" style="display:none">
+      <div id="featuredCards"></div>
+      <button class="btn-primary" id="featuredSubmit" style="display:block;margin:16px auto">提交</button>
+      <div id="featuredResults" style="margin-top:16px"></div>
+      <button class="fu-ask-btn" id="featuredFuBtn" style="display:block;margin:10px auto">💬 追问</button>
+      <div class="fu-chat" id="featuredFuChat" style="display:none">
+        <div class="fu-input-row">
+          <input type="text" id="featuredFuInput" placeholder="问 AI…" maxlength="300">
+          <button class="fu-send-btn" id="featuredFuSend">发送</button>
+        </div>
+        <div class="fu-user-q" id="featuredFuUser" style="display:none"></div>
+        <div class="fu-ai-r" id="featuredFuAi" style="display:none"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== CUSTOM EDITOR PAGE ===== -->
@@ -1451,6 +1473,7 @@ textarea{
   function saveWrongBook(){
     localStorage.setItem('fc_wrong_book', JSON.stringify(wrongBook));
     updateWrongBookBadge();
+    updateFeaturedBtn();
   }
   function updateWrongBookBadge(){
     if(wrongBook.length > 0){
@@ -1485,6 +1508,7 @@ textarea{
       </div>`;
     });
     wrongBookList.innerHTML = html;
+    updateFeaturedBtn();
     wrongBookList.querySelectorAll('.wb-card').forEach(card=>{
       card.addEventListener('click',()=> startWrongRedo(parseInt(card.dataset.wbi)));
     });
@@ -1659,18 +1683,262 @@ ${answerInfo}
     showPage('wrongBook');
   });
 
+  // === Featured Wrong Questions ===
+  const featuredPage = $('featuredPage');
+  const featuredBtn = $('featuredBtn');
+  const featuredStatus = $('featuredStatus');
+  const featuredQuiz = $('featuredQuiz');
+  const featuredCards = $('featuredCards');
+  const featuredResults = $('featuredResults');
+  let featuredQuestions = [];
+  let featuredAnswers = [];
+  let featuredFuUsed = false;
+
+  // Enable button based on count
+  function updateFeaturedBtn(){
+    if(wrongBook.length >= 10){
+      featuredBtn.disabled = false;
+      featuredBtn.textContent = '🎯 错题精选（' + wrongBook.length + ' 题中精选）';
+    }else{
+      featuredBtn.disabled = true;
+      featuredBtn.textContent = '🎯 错题精选（需 ≥ 10 题，当前 ' + wrongBook.length + ' 题）';
+    }
+  }
+
+  featuredBtn.addEventListener('click', async ()=>{
+    if(wrongBook.length < 10) return showToast('至少需要 10 道错题');
+    featuredStatus.innerHTML = '🤖 正在分析错题…<br><span style="font-size:12px;color:var(--text3)">DeepSeek 正在识别顽固题目</span>';
+    featuredQuiz.style.display = 'none';
+    featuredFuUsed = false;
+    showPage('featured');
+
+    // Build prompt with all wrong questions
+    const qList = wrongBook.map((q,i)=>{
+      let info = `${i+1}. [${q.type==='multi'?'多选':q.type==='text'?'填空':'单选'}] ${q.question}\n`;
+      if(q.type==='text') info += `   答案：${q.referenceAnswer}`;
+      else if(q.type==='multi') info += `   选项：${q.options.map((o,oi)=>String.fromCharCode(65+oi)+'. '+o).join('；')}\n   答案：${q.correctIndexes.map(ci=>String.fromCharCode(65+ci)).join('、')}`;
+      else info += `   选项：${q.options.map((o,oi)=>String.fromCharCode(65+oi)+'. '+o).join('；')}\n   答案：${String.fromCharCode(65+q.correctIndex)}`;
+      return info;
+    }).join('\n\n');
+
+    const prompt = `你是一个出题专家。以下错题中，选出 10 道最需要巩固的题目，适当润色，并调整题型（包含适量填空题和多选题）。
+
+输出 JSON 数组，每项：{"type":"choice|multi|text","question":"..."${"",}"options":["A","B","C","D","E"${multi时6个,text不要此字段}],"correctIndex":0${"",}"correctIndexes":[0,1]${"",}"referenceAnswer":"..."${"",}"explanation":"简短解释"}。必须纯文本JSON
+
+错题：
+${qList}
+
+只输出JSON数组：`;
+
+    try{
+      const apiKey = currentApiKey || '';
+      const timeoutMs = 80000;
+      const abortCtrl = new AbortController();
+      const timeout = setTimeout(()=>abortCtrl.abort(), timeoutMs);
+
+      const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+        body: JSON.stringify({model:'deepseek-chat',messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:4096}),
+        signal: abortCtrl.signal
+      });
+      clearTimeout(timeout);
+      if(!resp.ok) throw new Error('API '+resp.status);
+
+      const data = await resp.json();
+      const raw = data.choices[0].message.content;
+      console.log('%c🧠 错题精选思考：','color:#f1c40f');
+      console.log(raw);
+
+      // Parse the JSON from the response
+      let jsonStr = raw.trim();
+      const match = jsonStr.match(/\[[\s\S]*\]/);
+      if(match) jsonStr = match[0];
+
+      featuredQuestions = JSON.parse(jsonStr);
+      if(!Array.isArray(featuredQuestions) || featuredQuestions.length === 0) throw new Error('empty');
+
+      // Remove correctly-answered questions from wrong book
+      wrongBook = wrongBook.filter(wq => {
+        return featuredQuestions.some(fq => fq.question === wq.question);
+      });
+      saveWrongBook();
+
+      // Setup quiz state
+      featuredAnswers = featuredQuestions.map(()=> ({selectedIndex:null,selectedIndexes:[],textAnswer:'',confidence:null}));
+
+      // Render
+      featuredStatus.innerHTML = `✅ 已精选 ${featuredQuestions.length} 道顽固题目`;
+      let qHtml = '';
+      featuredQuestions.forEach((q,qi)=>{
+        qHtml += `<div class="review-card" style="margin-bottom:12px"><div class="q-number" style="margin-bottom:8px">第 ${qi+1} 题 ${q.type==='multi'?'<span style="background:rgba(167,139,250,0.15);color:#a78bfa;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:6px">多选</span>':q.type==='text'?'<span style="background:rgba(46,204,113,0.12);color:#2ecc71;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:6px">填空</span>':''}</div>
+        <div class="q-text" style="font-size:15px;margin-bottom:10px">${escapeHtml(q.question)}</div>`;
+        if(q.type==='text'){
+          qHtml += `<textarea class="ft-input" data-qi="${qi}" placeholder="输入答案…" style="width:100%;padding:8px;border-radius:4px;background:var(--surface2);color:var(--text);border:1px solid var(--border);min-height:60px;font-size:14px"></textarea>`;
+        }else{
+          if(q.type==='multi') qHtml += '<div style="font-size:12px;color:var(--text3);margin-bottom:4px">选 2 个</div>';
+          q.options.forEach((opt,oi)=>{
+            qHtml += `<div class="option${q.type==='multi'?' multi-opt ft-multi-opt':''}" id="ftopt-${qi}-${oi}" data-qi="${qi}" data-oi="${oi}">
+              <div class="option-letter">${String.fromCharCode(65+oi)}</div>
+              <div class="option-text">${escapeHtml(opt)}</div>
+            </div>`;
+          });
+        }
+        qHtml += '</div>';
+      });
+      featuredCards.innerHTML = qHtml;
+      featuredQuiz.style.display = '';
+
+      // Attach click handlers
+      featuredCards.querySelectorAll('.option:not(.ft-multi-opt)').forEach(opt=>{
+        opt.addEventListener('click',()=>{
+          const qi = parseInt(opt.dataset.qi);
+          featuredCards.querySelectorAll(`[data-qi="${qi}"].option`).forEach(o=>o.classList.remove('selected'));
+          opt.classList.add('selected');
+          featuredAnswers[qi].selectedIndex = parseInt(opt.dataset.oi);
+        });
+      });
+      featuredCards.querySelectorAll('.ft-multi-opt').forEach(opt=>{
+        opt.addEventListener('click',()=>{
+          const qi = parseInt(opt.dataset.qi);
+          const oi = parseInt(opt.dataset.oi);
+          const ans = featuredAnswers[qi];
+          if(!Array.isArray(ans.selectedIndexes)) ans.selectedIndexes = [];
+          if(ans.selectedIndexes.includes(oi)){
+            opt.classList.remove('multi-selected');
+            ans.selectedIndexes = ans.selectedIndexes.filter(x=>x!==oi);
+          }else if(ans.selectedIndexes.length < 2){
+            opt.classList.add('multi-selected');
+            ans.selectedIndexes = [...ans.selectedIndexes, oi];
+          }
+        });
+      });
+      featuredCards.querySelectorAll('.ft-input').forEach(inp=>{
+        inp.addEventListener('input',()=>{
+          featuredAnswers[parseInt(inp.dataset.qi)].textAnswer = inp.value;
+        });
+      });
+    }catch(e){
+      console.error('精选失败', e);
+      featuredStatus.innerHTML = `<span style="color:var(--red)">❌ 精选失败：${e.message}</span>`;
+      featuredQuiz.style.display = 'none';
+    }
+  });
+
+  // Submit featured quiz
+  $('featuredSubmit').addEventListener('click',()=>{
+    let score = 0;
+    featuredQuestions.forEach((q,qi)=>{
+      const ans = featuredAnswers[qi];
+      let isCorrect = false;
+      if(q.type==='text'){
+        const inp = featuredCards.querySelector(`.ft-input[data-qi="${qi}"]`);
+        if(inp) featuredAnswers[qi].textAnswer = inp.value;
+        isCorrect = (featuredAnswers[qi].textAnswer||'').trim().toLowerCase() === (q.referenceAnswer||'').toLowerCase();
+      }else if(q.type==='multi'){
+        const sel = [...(ans.selectedIndexes||[])].sort().join(',');
+        const correct = [...(q.correctIndexes||[])].sort().join(',');
+        isCorrect = sel === correct;
+      }else{
+        isCorrect = ans.selectedIndex === q.correctIndex;
+      }
+      if(isCorrect) score++;
+      featuredAnswers[qi]._isCorrect = isCorrect;
+    });
+    // Render results
+    let rHtml = `<div class="score-circle" style="width:80px;height:80px;margin:0 auto 12px">
+      <div class="score-number" style="font-size:28px">${Math.round(score/featuredQuestions.length*100)}</div>
+      <div class="score-total" style="font-size:12px;margin-top:2px">%</div>
+    </div><div style="text-align:center;margin-bottom:12px;color:var(--text2);font-size:14px">${score}/${featuredQuestions.length} 正确</div>`;
+
+    featuredQuestions.forEach((q,qi)=>{
+      const ans = featuredAnswers[qi];
+      const isCorrect = ans._isCorrect;
+      rHtml += `<div class="review-card" style="margin-bottom:10px"><div style="color:${isCorrect?'var(--green)':'var(--red)'};font-weight:600">${isCorrect?'✓':'✗'} 第 ${qi+1} 题</div>
+        <div style="margin:6px 0;color:var(--text)">${escapeHtml(q.question)}</div>`;
+      if(q.type==='text'){
+        rHtml += `<div style="font-size:13px;color:var(--text3)">你的回答：${escapeHtml(ans.textAnswer||'(空)')}</div>
+        <div style="font-size:13px;color:var(--green)">正确答案：${escapeHtml(q.referenceAnswer)}</div>`;
+      }else{
+        const userSel = q.type==='multi' ? (ans.selectedIndexes||[]).map(si=>String.fromCharCode(65+si)).join('、')||'未选' : (ans.selectedIndex!=null?String.fromCharCode(65+ans.selectedIndex):'未选');
+        const correct = q.type==='multi' ? (q.correctIndexes||[]).map(ci=>String.fromCharCode(65+ci)).join('、') : String.fromCharCode(65+q.correctIndex);
+        rHtml += `<div style="font-size:13px;color:var(--text3)">你的选择：${userSel}</div>
+        <div style="font-size:13px;color:var(--green)">正确答案：${correct}</div>`;
+      }
+      if(q.explanation) rHtml += `<div style="font-size:12px;color:var(--text3);margin-top:4px">💡 ${escapeHtml(q.explanation)}</div>`;
+      rHtml += '</div>';
+    });
+    // Copy/download for hard mode
+    featuredResults.innerHTML = rHtml + (difficulty==='hard' ? '' : `<div style="display:flex;gap:10px;justify-content:center;margin-top:10px">
+      <button class="btn-secondary" id="ftCopyJsonBtn">📋 复制 JSON</button>
+      <button class="btn-secondary" id="ftDownloadJsonBtn">💾 下载 JSON</button>
+    </div>`);
+    // Wire up copy/download
+    const ftCopy = document.getElementById('ftCopyJsonBtn');
+    const ftDownload = document.getElementById('ftDownloadJsonBtn');
+    if(ftCopy) ftCopy.addEventListener('click',()=>{
+      navigator.clipboard.writeText(JSON.stringify(featuredQuestions,null,2)).then(()=>showToast('已复制','success'));
+    });
+    if(ftDownload) ftDownload.addEventListener('click',()=>{
+      const blob = new Blob([JSON.stringify(featuredQuestions,null,2)],{type:'application/json'});
+      const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='featured-questions.json';
+      a.click(); URL.revokeObjectURL(a.href); showToast('已下载','success');
+    });
+  });
+
+  // Featured follow-up (one-time)
+  $('featuredFuBtn').addEventListener('click',()=>{
+    if(featuredFuUsed) return;
+    const chat = $('featuredFuChat');
+    chat.style.display = chat.style.display==='block'?'none':'block';
+  });
+  $('featuredFuSend').addEventListener('click', async ()=>{
+    if(featuredFuUsed) return;
+    const inp = $('featuredFuInput'); const uq = inp.value.trim();
+    if(!uq) return;
+    inp.disabled = true; $('featuredFuSend').disabled = true;
+    const userEl = $('featuredFuUser'); const aiEl = $('featuredFuAi');
+    userEl.innerHTML = `<div class="fu-label">你的追问</div>${escapeHtml(uq)}`;
+    userEl.style.display='block';
+    aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span class="cursor-blink"></span>`;
+    aiEl.style.display='block';
+    let buf='';
+    const qInfo = featuredQuestions.map((q,i)=>`${i+1}. ${q.question} (答案：${q.type==='text'?q.referenceAnswer:q.type==='multi'?(q.correctIndexes||[]).map(ci=>String.fromCharCode(65+ci)+'. '+q.options[ci]).join('、'):String.fromCharCode(65+q.correctIndex)+'. '+q.options[q.correctIndex]})`).join('\n');
+    const sp = `你是耐心助教。以下是错题精选中的题目：
+${qInfo}
+规则：通俗解释，200字内。中文回复。`;
+    try{
+      if(!currentAbort) currentAbort = new AbortController();
+      await streamDeepSeek(sp, uq, ()=>{},
+        (chunk)=>{ buf+=chunk; aiEl.innerHTML=`<div class="fu-label">AI 回复</div>${escapeHtml(buf)}<span class="cursor-blink"></span>`; }
+      );
+      aiEl.innerHTML = `<div class="fu-label">AI 回复</div>${escapeHtml(buf)}`;
+    }catch(e){
+      aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">${e.name==='TimeoutError'?'超时':'失败'}</span>`;
+    }
+    featuredFuUsed = true;
+    const fuBtn = $('featuredFuBtn'); fuBtn.textContent='已追问'; fuBtn.disabled=true; fuBtn.style.opacity='0.5';
+    $('featuredFuInput').style.display='none'; $('featuredFuSend').style.display='none';
+  });
+
+  $('backFromFeatured').addEventListener('click',()=>{
+    renderWrongBook();
+    showPage('wrongBook');
+  });
+
   // Load on init
   loadWrongBook();
 
   // === Show page ===
   function showPage(name){
-    [setupPage, quizPage, resultsPage, customPage, wrongBookPage, wrongRedoPage].forEach(p=>p.classList.remove('active'));
+    [setupPage, quizPage, resultsPage, customPage, wrongBookPage, wrongRedoPage, featuredPage].forEach(p=>p.classList.remove('active'));
     if(name==='setup') setupPage.classList.add('active');
     if(name==='quiz') quizPage.classList.add('active');
     if(name==='results') resultsPage.classList.add('active');
     if(name==='custom') customPage.classList.add('active');
     if(name==='wrongBook') wrongBookPage.classList.add('active');
     if(name==='wrongRedo') wrongRedoPage.classList.add('active');
+    if(name==='featured') featuredPage.classList.add('active');
     window.scrollTo({top:0,behavior:'smooth'});
   }
 
@@ -2387,9 +2655,9 @@ correctIndex 从 0 开始，correctIndexes 是恰好含 2 个索引的数组。
         });
       });
 
-      // Hide copy/download on hard difficulty
-      copyJsonBtn.style.display = (difficulty === 'hard') ? 'none' : '';
-      downloadJsonBtn.style.display = (difficulty === 'hard') ? 'none' : '';
+      // Copy/download always visible on results
+      copyJsonBtn.style.display = '';
+      downloadJsonBtn.style.display = '';
 
       showPage('results');
     } catch (e) {
