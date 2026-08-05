@@ -1417,20 +1417,43 @@ textarea{
   const customImportBtn = $('customImportBtn');
   const customImportFile = $('customImportFile');
   customImportBtn.addEventListener('click',async ()=>{
-    let parsed = null;
-    // Try clipboard first
+    let hasClipboard = false;
     try{
       const text = await navigator.clipboard.readText();
-      parsed = JSON.parse(text);
-      if(!Array.isArray(parsed) || parsed.length === 0) parsed = null;
+      const parsed = JSON.parse(text);
+      if(Array.isArray(parsed) && parsed.length > 0) hasClipboard = true;
     }catch(e){}
-    if(parsed){
-      customQuestions = parsed.map(q=>({...q}));
-      renderCustomEditor();
-      showToast('已从剪贴板导入 ' + customQuestions.length + ' 题', 'success');
-      return;
+
+    const dlg = document.getElementById('importDialog');
+    const dlgTitle = document.getElementById('dlgTitle');
+    const dlgBody = document.getElementById('dialogBody');
+    const dlgClip = document.getElementById('dlgClipboard');
+    const dlgFileBtn = document.getElementById('dlgFile');
+    const dlgCancel = document.getElementById('dlgCancel');
+
+    if(hasClipboard){
+      dlgTitle.textContent = '请选择导入方式';
+      dlgBody.textContent = '从剪贴板读取到题目数据，请选择导入方式：';
+      dlgClip.style.display = '';
+    }else{
+      dlgTitle.textContent = '请选择文件';
+      dlgBody.textContent = '未能从剪贴板读取有效题目 JSON，请选择文件导入：';
+      dlgClip.style.display = 'none';
     }
-    customImportFile.click();
+    dlg.style.display = 'flex';
+
+    dlgClip.onclick = async ()=>{
+      dlg.style.display = 'none';
+      try{
+        const text = await navigator.clipboard.readText();
+        const parsed = JSON.parse(text);
+        customQuestions = parsed.map(q=>({...q}));
+        renderCustomEditor();
+        showToast('已从剪贴板导入 ' + customQuestions.length + ' 题', 'success');
+      }catch(e){ showToast('剪贴板无效'); }
+    };
+    dlgFileBtn.onclick = ()=>{ dlg.style.display = 'none'; customImportFile.click(); };
+    dlgCancel.onclick = ()=>{ dlg.style.display = 'none'; };
   });
   customImportFile.addEventListener('change',(e)=>{
     const file = e.target.files[0];
