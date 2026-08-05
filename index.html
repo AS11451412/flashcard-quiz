@@ -1071,6 +1071,7 @@ textarea{
         engine = p.dataset.engine;
         deepseekKeyCard.style.display = (engine === 'deepseek') ? '' : 'none';
         doubaoKeyCard.style.display = (engine === 'doubao') ? '' : 'none';
+        updateFeaturedBtn();
         // Doubao max=20; if count>20, auto-reduce
         if(engine === 'doubao' && questionCount > 20){
           questionCount = 20;
@@ -1707,6 +1708,11 @@ ${answerInfo}
 
   // Enable button based on count
   function updateFeaturedBtn(){
+    if(engine !== 'deepseek'){
+      featuredBtn.disabled = true;
+      featuredBtn.textContent = '错题精选，请切换到 DeepSeek 引擎';
+      return;
+    }
     if(wrongBook.length >= 10){
       featuredBtn.disabled = false;
       featuredBtn.textContent = '🎯 错题精选（' + wrongBook.length + ' 题中精选）';
