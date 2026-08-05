@@ -1528,6 +1528,8 @@ textarea{
       </div>`;
     });
     wrongBookList.innerHTML = html;
+    // Reset export mode when cards re-render
+    if($('exportWrongPartial').textContent === '📦 开始导出错题') exitExportMode();
     updateFeaturedBtn();
     wrongBookList.querySelectorAll('.wb-card').forEach(card=>{
       card.addEventListener('click',()=> startWrongRedo(parseInt(card.dataset.wbi)));
@@ -1782,12 +1784,21 @@ ${answerInfo}
       cb.type = 'checkbox';
       cb.className = 'wb-check';
       cb.dataset.wbi = i;
-      cb.style.cssText = 'position:absolute;top:8px;right:8px;width:18px;height:18px;accent-color:var(--accent);cursor:pointer;z-index:1';
+      cb.style.cssText = 'position:absolute;top:8px;right:8px;width:24px;height:24px;accent-color:var(--accent);cursor:pointer;z-index:2';
       card.style.position = 'relative';
       card.appendChild(cb);
       // Prevent card click from triggering redo
       cb.addEventListener('click', e=>{ e.stopPropagation(); });
     });
+    // When user clicks a card to redo, exit export mode
+    if(!wrongBookList._exportHandlersFixed){
+      wrongBookList.querySelectorAll('.wb-card').forEach(card=>{
+        card.addEventListener('click', ()=>{
+          if($('exportWrongPartial').textContent === '📦 开始导出错题') exitExportMode();
+        }, true); // capture phase
+      });
+      wrongBookList._exportHandlersFixed = true;
+    }
   }
 
   function exitExportMode(){
