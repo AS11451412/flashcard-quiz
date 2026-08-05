@@ -1417,11 +1417,11 @@ textarea{
   const customImportBtn = $('customImportBtn');
   const customImportFile = $('customImportFile');
   customImportBtn.addEventListener('click',async ()=>{
-    let hasClipboard = false;
+    let clipCount = 0;
     try{
       const text = await navigator.clipboard.readText();
       const parsed = JSON.parse(text);
-      if(Array.isArray(parsed) && parsed.length > 0) hasClipboard = true;
+      if(Array.isArray(parsed) && parsed.length > 0){ hasClipboard = true; clipCount = parsed.length; }
     }catch(e){}
 
     const dlg = document.getElementById('importDialog');
@@ -1433,7 +1433,7 @@ textarea{
 
     if(hasClipboard){
       dlgTitle.textContent = '请选择导入方式';
-      dlgBody.textContent = '从剪贴板读取到题目数据，请选择导入方式：';
+      dlgBody.textContent = '从剪贴板读取到 ' + clipCount + ' 道题目，请选择导入方式：';
       dlgClip.style.display = '';
     }else{
       dlgTitle.textContent = '请选择文件';
