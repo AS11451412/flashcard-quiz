@@ -1738,15 +1738,20 @@ ${qList}
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body: JSON.stringify({model:'deepseek-chat',messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:4096}),
+        body: JSON.stringify({model:'deepseek-reasoner',messages:[{role:'user',content:prompt}],max_tokens:8192}),
         signal: abortCtrl.signal
       });
       clearTimeout(timeout);
       if(!resp.ok) throw new Error('API '+resp.status);
 
       const data = await resp.json();
+      const reasoning = data.choices[0].message.reasoning_content;
       const raw = data.choices[0].message.content;
-      console.log('%c🧠 错题精选思考：','color:#f1c40f');
+      if(reasoning){
+        console.log('%c🧠 错题精选思考过程：','color:#f1c40f');
+        console.log(reasoning);
+      }
+      console.log('%c📝 错题精选输出：','color:#2ecc71');
       console.log(raw);
 
       // Parse the JSON from the response
