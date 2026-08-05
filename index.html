@@ -887,19 +887,18 @@ textarea{
     <h3 style="text-align:center;margin:16px 0;color:var(--text)">错题精选</h3>
     <div id="featuredStatus" style="text-align:center;color:var(--text3);padding:20px"></div>
     <div id="featuredQuiz" style="display:none">
-      <div id="featuredCards"></div>
-      <button class="btn-primary" id="featuredSubmit" style="display:block;margin:16px auto">提交</button>
-      <div id="featuredResults" style="margin-top:16px"></div>
-      <button class="fu-ask-btn" id="featuredFuBtn" style="display:block;margin:10px auto">💬 追问</button>
-      <div class="fu-chat" id="featuredFuChat" style="display:none">
+      <button class="fu-ask-btn" id="featuredFuBtn" style="display:block;margin:0 auto 8px">💬 追问</button>
+      <div class="fu-chat" id="featuredFuChat" style="display:none;margin-bottom:12px">
         <div class="fu-input-row">
-          <input type="text" id="featuredFuInput" placeholder="问 AI…" maxlength="300">
+          <input type="text" id="featuredFuInput" placeholder="问 AI 关于这些题目…" maxlength="300">
           <button class="fu-send-btn" id="featuredFuSend">发送</button>
         </div>
         <div class="fu-user-q" id="featuredFuUser" style="display:none"></div>
         <div class="fu-ai-r" id="featuredFuAi" style="display:none"></div>
       </div>
-    </div>
+      <div id="featuredCards"></div>
+      <button class="btn-primary" id="featuredSubmit" style="display:block;margin:16px auto">提交</button>
+      <div id="featuredResults" style="margin-top:16px"></div>
   </div>
 
   <!-- ===== CUSTOM EDITOR PAGE ===== -->
