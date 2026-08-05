@@ -887,15 +887,6 @@ textarea{
     <h3 style="text-align:center;margin:16px 0;color:var(--text)">错题精选</h3>
     <div id="featuredStatus" style="text-align:center;color:var(--text3);padding:20px"></div>
     <div id="featuredQuiz" style="display:none">
-      <button class="fu-ask-btn" id="featuredFuBtn" style="display:block;margin:0 auto 8px">💬 追问</button>
-      <div class="fu-chat" id="featuredFuChat" style="display:none;margin-bottom:12px">
-        <div class="fu-input-row">
-          <input type="text" id="featuredFuInput" placeholder="问 AI 关于这些题目…" maxlength="300">
-          <button class="fu-send-btn" id="featuredFuSend">发送</button>
-        </div>
-        <div class="fu-user-q" id="featuredFuUser" style="display:none"></div>
-        <div class="fu-ai-r" id="featuredFuAi" style="display:none"></div>
-      </div>
       <div id="featuredCards"></div>
       <button class="btn-primary" id="featuredSubmit" style="display:block;margin:16px auto">提交</button>
       <div id="featuredResults" style="margin-top:16px"></div>
@@ -1878,6 +1869,15 @@ ${qList}
         <div style="font-size:13px;color:var(--green)">正确答案：${correct}</div>`;
       }
       if(q.explanation) rHtml += `<div style="font-size:12px;color:var(--text3);margin-top:4px">💡 ${escapeHtml(q.explanation)}</div>`;
+      // Per-question one-time follow-up
+      rHtml += `<div style="margin-top:8px" class="ft-fu-zone" data-qi="${qi}">
+        <button class="fu-ask-btn ft-fu-btn">💬 追问此题</button>
+        <div class="fu-chat ft-fu-chat" style="display:none;margin-top:6px">
+          <div class="fu-input-row"><input type="text" class="ft-fu-input" placeholder="问 AI 关于这道题…" maxlength="300"><button class="fu-send-btn ft-fu-send">发送</button></div>
+          <div class="fu-user-q ft-fu-user" style="display:none"></div>
+          <div class="fu-ai-r ft-fu-ai" style="display:none"></div>
+        </div>
+      </div>`;
       rHtml += '</div>';
     });
     // Copy/download for hard mode
@@ -1896,41 +1896,54 @@ ${qList}
       const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='featured-questions.json';
       a.click(); URL.revokeObjectURL(a.href); showToast('已下载','success');
     });
-  });
+    // Per-question follow-up
+    featuredResults.querySelectorAll('.ft-fu-zone').forEach(zone=>{
+      const qi = parseInt(zone.dataset.qi);
+      const btn = zone.querySelector('.ft-fu-btn');
+      const chat = zone.querySelector('.ft-fu-chat');
+      const sendBtn = zone.querySelector('.ft-fu-send');
+      const input = zone.querySelector('.ft-fu-input');
+      const userEl = zone.querySelector('.ft-fu-user');
+      const aiEl = zone.querySelector('.ft-fu-ai');
+      let used = false;
 
-  // Featured follow-up (one-time)
-  $('featuredFuBtn').addEventListener('click',()=>{
-    if(featuredFuUsed) return;
-    const chat = $('featuredFuChat');
-    chat.style.display = chat.style.display==='block'?'none':'block';
-  });
-  $('featuredFuSend').addEventListener('click', async ()=>{
-    if(featuredFuUsed) return;
-    const inp = $('featuredFuInput'); const uq = inp.value.trim();
-    if(!uq) return;
-    inp.disabled = true; $('featuredFuSend').disabled = true;
-    const userEl = $('featuredFuUser'); const aiEl = $('featuredFuAi');
-    userEl.innerHTML = `<div class="fu-label">你的追问</div>${escapeHtml(uq)}`;
-    userEl.style.display='block';
-    aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span class="cursor-blink"></span>`;
-    aiEl.style.display='block';
-    let buf='';
-    const qInfo = featuredQuestions.map((q,i)=>`${i+1}. ${q.question} (答案：${q.type==='text'?q.referenceAnswer:q.type==='multi'?(q.correctIndexes||[]).map(ci=>String.fromCharCode(65+ci)+'. '+q.options[ci]).join('、'):String.fromCharCode(65+q.correctIndex)+'. '+q.options[q.correctIndex]})`).join('\n');
-    const sp = `你是耐心助教。以下是错题精选中的题目：
+      btn.addEventListener('click',()=>{
+        if(used) return;
+        chat.style.display = chat.style.display==='block'?'none':'block';
+      });
+      sendBtn.addEventListener('click', async ()=>{
+        if(used) return;
+        const uq = input.value.trim();
+        if(!uq) return;
+        used = true;
+        input.disabled = true; sendBtn.disabled = true;
+        btn.textContent = '已追问'; btn.disabled = true; btn.style.opacity = '0.5';
+        input.style.display = 'none'; sendBtn.style.display = 'none';
+        userEl.innerHTML = `<div class="fu-label">你的追问</div>${escapeHtml(uq)}`;
+        userEl.style.display = 'block';
+        aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span class="cursor-blink"></span>`;
+        aiEl.style.display = 'block';
+        let buf = '';
+        const q = featuredQuestions[qi];
+        const qInfo = q.type==='text'
+          ? `题目：${q.question}\n答案：${q.referenceAnswer}`
+          : q.type==='multi'
+            ? `题目：${q.question}\n选项：${q.options.map((o,i)=>String.fromCharCode(65+i)+'. '+o).join('；')}\n答案：${(q.correctIndexes||[]).map(ci=>String.fromCharCode(65+ci)+'. '+q.options[ci]).join('、')}`
+            : `题目：${q.question}\n选项：${q.options.map((o,i)=>String.fromCharCode(65+i)+'. '+o).join('；')}\n答案：${String.fromCharCode(65+q.correctIndex)}. ${q.options[q.correctIndex]}`;
+        const sp = `你是耐心助教。以下是一道错题：
 ${qInfo}
 规则：通俗解释，200字内。中文回复。`;
-    try{
-      if(!currentAbort) currentAbort = new AbortController();
-      await streamDeepSeek(sp, uq, ()=>{},
-        (chunk)=>{ buf+=chunk; aiEl.innerHTML=`<div class="fu-label">AI 回复</div>${escapeHtml(buf)}<span class="cursor-blink"></span>`; }
-      );
-      aiEl.innerHTML = `<div class="fu-label">AI 回复</div>${escapeHtml(buf)}`;
-    }catch(e){
-      aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">${e.name==='TimeoutError'?'超时':'失败'}</span>`;
-    }
-    featuredFuUsed = true;
-    const fuBtn = $('featuredFuBtn'); fuBtn.textContent='已追问'; fuBtn.disabled=true; fuBtn.style.opacity='0.5';
-    $('featuredFuInput').style.display='none'; $('featuredFuSend').style.display='none';
+        try{
+          if(!currentAbort) currentAbort = new AbortController();
+          await streamDeepSeek(sp, uq, ()=>{},
+            (chunk)=>{ buf+=chunk; aiEl.innerHTML=`<div class="fu-label">AI 回复</div>${escapeHtml(buf)}<span class="cursor-blink"></span>`; }
+          );
+          aiEl.innerHTML = `<div class="fu-label">AI 回复</div>${escapeHtml(buf)}`;
+        }catch(e){
+          aiEl.innerHTML = `<div class="fu-label">AI 回复</div><span style="color:var(--red)">${e.name==='TimeoutError'?'超时':'失败'}</span>`;
+        }
+      });
+    });
   });
 
   $('backFromFeatured').addEventListener('click',()=>{
