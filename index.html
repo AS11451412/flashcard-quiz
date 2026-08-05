@@ -1750,42 +1750,52 @@ ${qList}`;
         console.log('%c🧠 错题精选思考过程：','color:#f1c40f');
         console.log(reasoning);
       }
-      console.log('%c📝 错题精选输出：','color:#2ecc71');
-      console.log(raw);
+      console.log('%c📝 错题精选输出 (前200字)：','color:#2ecc71');
+      console.log((raw||'(empty)').substring(0,200));
 
-      // Parse output: try array first, then JSONL
-      let cleaned = raw.trim();
-      // Strip fences
-      cleaned = cleaned.replace(/```(?:json)?\s*/g, '').replace(/```/g, '');
+      // Parse: aggressively extract JSON objects from the raw text
+      let text = (raw || '').trim();
+      console.log('%c🔧 解析长度：'+text.length+' 字','color:#888');
+
       let worked = null;
-      // Try array
-      const arrMatch = cleaned.match(/\[([\s\S]*)\]/);
-      if(arrMatch){
-        try{ worked = JSON.parse('[' + arrMatch[1].replace(/,(\s*[}\]])/g, '$1') + ']'); }
-        catch(e){ console.warn('Array parse failed', e.message); }
+
+      // Step 1: Try to find every { ... } block that parses as valid JSON
+      const allObjs = [];
+      const braceBlocks = text.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g) || [];
+      for(const block of braceBlocks){
+        try{
+          const obj = JSON.parse(block);
+          if(obj.type && (obj.question || obj.explanation)) allObjs.push(obj);
+        }catch(e){}
       }
-      // Try JSONL
-      if(!worked || !Array.isArray(worked) || worked.length < 7){
-        const jlines = cleaned.split('\n')
-          .map(l=>l.trim()).filter(l=>l.startsWith('{'))
-          .map(l=>{ try{ return JSON.parse(l); }catch{ return null; } }).filter(Boolean);
-        if(jlines.length >= 7) worked = jlines;
-      }
-      // Final try: split on }{ boundary
-      if(!worked || !Array.isArray(worked) || worked.length < 7){
-        const flat = cleaned.replace(/\}\s*\{/g, '}\n{');
-        const flines = flat.split('\n')
-          .map(l=>l.trim()).filter(l=>l.startsWith('{'))
-          .map(l=>{ try{ return JSON.parse(l); }catch{ return null; } }).filter(Boolean);
-        if(flines.length >= 7) worked = flines;
+      console.log('%c🔧 从文本中找到 '+allObjs.length+' 个有效对象','color:#888');
+      if(allObjs.length >= 7) worked = allObjs;
+
+      // Step 2: If no luck, strip everything except JSON-like lines
+      if(!worked){
+        const cleaned = text
+          .replace(/```[\s\S]*?```/g, '')  // remove code blocks
+          .replace(/[^\n]*[a-zA-Z\u4e00-\u9fff][^\n]*/g, m => m.startsWith('{') ? m : '') // keep only { lines
+          .split('\n').filter(l => l.trim().startsWith('{'));
+        const objs = cleaned.map(l => { try{return JSON.parse(l)}catch{return null} }).filter(Boolean);
+        if(objs.length >= 7) worked = objs;
       }
 
-      if(!worked || !Array.isArray(worked) || worked.length === 0){
-        console.error('无法解析，原始输出：', raw);
-        throw new Error('AI 输出格式异常，请重试');
+      // Step 3: Try wrapping in array
+      if(!worked){
+        try{
+          const arrText = text.replace(/^[^\[]*\[/s, '[').replace(/\][^\]]*$/s, ']');
+          const simple = arrText.replace(/,(\s*[}\]])/g, '$1');
+          const arr = JSON.parse(simple);
+          if(Array.isArray(arr) && arr.length >= 7) worked = arr;
+        }catch(e){}
+      }
+
+      if(!worked || worked.length < 7){
+        console.error('❌ 所有解析策略失败，原始输出：', raw);
+        throw new Error('AI 输出格式异常，原始长度：'+(raw||'').length+' 字，找到 '+(worked||[]).length+' 题');
       }
       featuredQuestions = worked;
-      if(!Array.isArray(featuredQuestions) || featuredQuestions.length === 0) throw new Error('Invalid result');
       wrongBook = wrongBook.filter(wq => {
         return featuredQuestions.some(fq => fq.question === wq.question);
       });
