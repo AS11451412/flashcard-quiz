@@ -1848,11 +1848,16 @@ ${qList}
       if(isCorrect) score++;
       featuredAnswers[qi]._isCorrect = isCorrect;
     });
-    // Render results
-    let rHtml = `<div class="score-circle" style="width:80px;height:80px;margin:0 auto 12px">
-      <div class="score-number" style="font-size:28px">${Math.round(score/featuredQuestions.length*100)}</div>
-      <div class="score-total" style="font-size:12px;margin-top:2px">%</div>
-    </div><div style="text-align:center;margin-bottom:12px;color:var(--text2);font-size:14px">${score}/${featuredQuestions.length} 正确</div>`;
+    // Render results like normal quiz results
+    let rHtml = '';
+    const pct = Math.round(score/featuredQuestions.length*100);
+    let msg = '';
+    if(pct>=90) msg='太厉害了！';
+    else if(pct>=70) msg='做得不错！';
+    else if(pct>=50) msg='继续加油！';
+    else msg='多多练习！';
+    rHtml += `<div class="score-circle"><div class="score-num">${pct}%</div><div class="score-total">${score}/${featuredQuestions.length} 正确</div></div>`;
+    rHtml += `<div class="result-msg">${msg}</div>`;
 
     featuredQuestions.forEach((q,qi)=>{
       const ans = featuredAnswers[qi];
