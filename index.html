@@ -1737,7 +1737,7 @@ ${qList}`;
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],max_tokens:8192,stream:false}),
+        body: JSON.stringify({model:'deepseek-v4-flash',messages:[{role:'user',content:prompt}],thinking:{type:'enabled'},reasoning_effort:'medium',max_tokens:16384,stream:false}),
         signal: abortCtrl.signal
       });
       clearTimeout(timeout);
