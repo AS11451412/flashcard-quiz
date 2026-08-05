@@ -1718,6 +1718,7 @@ ${answerInfo}
 
   featuredBtn.addEventListener('click', (e)=>{
     if(wrongBook.length < 10) return showToast('至少需要 10 道错题');
+    if(engine !== 'deepseek') return showToast('错题精选仅支持 DeepSeek，请切换引擎');
     const saved = localStorage.getItem('fc_reason_effort');
     // Shift+click: toggle "always" preference
     if(e.shiftKey){
