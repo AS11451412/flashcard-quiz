@@ -1846,18 +1846,22 @@ ${answerInfo}
     if(wrongBook.length < 10) return showToast('至少需要 10 道错题');
     if(engine !== 'deepseek') return showToast('错题精选仅支持 DeepSeek，请切换引擎');
     const saved = localStorage.getItem('fc_reason_effort');
-    // Shift+click: toggle "always" preference
+    // Shift+click: ignore always, pop dialog to pick different effort
     if(e.shiftKey){
+      const saved = localStorage.getItem('fc_reason_effort');
       if(saved){
-        localStorage.removeItem('fc_reason_effort'); showToast('已取消记忆，下次弹窗选择','success');
-      }else{
-        showToast('当前未设置记忆，请直接选择', 'info');
+        localStorage.removeItem('fc_reason_effort');
+        showToast('已取消记忆，请重新选择强度', 'info');
       }
+      showReasonDialog();
       return;
     }
     // If saved, use it directly
     if(saved){ startFeaturedAnalysis(saved); return; }
-    // Show dialog
+    showReasonDialog();
+  });
+
+  function showReasonDialog(){
     const dlg = document.getElementById('reasonDialog');
     dlg.style.display = 'flex';
     document.getElementById('reasonAlways').checked = false;
@@ -1888,6 +1892,7 @@ ${answerInfo}
       dlg.style.display = 'none';
       startFeaturedAnalysis('none');
     };
+  }
   });
 
   async function startFeaturedAnalysis(effort, skipDialog){
