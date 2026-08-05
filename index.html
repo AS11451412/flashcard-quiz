@@ -1744,8 +1744,18 @@ ${qList}`;
       if(!resp.ok) throw new Error('API '+resp.status);
 
       const data = await resp.json();
-      const reasoning = data.choices[0].message.reasoning_content;
-      const raw = data.choices[0].message.content;
+      // Diagnostic: dump all keys
+      console.log('%c🔍 API 响应结构：','color:#f1c40f');
+      console.log('choices keys:', Object.keys(data.choices?.[0]?.message||{}));
+      console.log('message:', data.choices?.[0]?.message);
+
+      const reasoning = data.choices[0].message.reasoning_content || data.choices[0].message.reasoning || '';
+      let raw = data.choices[0].message.content || data.choices[0].message.text || '';
+      // Fallback: if content empty but reasoning has JSON, use reasoning
+      if(!raw && reasoning && reasoning.includes('{')){
+        console.log('%c⚠️ content 为空，尝试从 reasoning_content 提取','color:#f1c40f');
+        raw = reasoning;
+      }
       if(reasoning){
         console.log('%c🧠 错题精选思考过程：','color:#f1c40f');
         console.log(reasoning);
