@@ -1474,18 +1474,19 @@ textarea{
     }
   }
 
+  let clearClickTime = 0;
   $('clearCustomBtn').addEventListener('click',()=>{
-    const dlg = document.getElementById('confirmDialog');
-    document.getElementById('confirmBody').textContent = '确定要清空所有自定义题目吗？此操作不可撤销。';
-    dlg.style.display = 'flex';
-    document.getElementById('confirmOk').onclick = ()=>{
-      dlg.style.display = 'none';
+    const now = Date.now();
+    if(now - clearClickTime < 300){
+      clearClickTime = 0;
       customQuestions = [getDefaultQuestion('choice')];
       localStorage.removeItem('fc_custom');
       renderCustomEditor();
       showToast('已清空','success');
-    };
-    document.getElementById('confirmCancel').onclick = ()=>{ dlg.style.display = 'none'; };
+    }else{
+      clearClickTime = now;
+      showToast('再点一次确认清空','info');
+    }
   });
 
   finishCustomBtn.addEventListener('click',()=>{
