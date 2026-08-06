@@ -910,6 +910,7 @@ textarea{
       <button class="btn-secondary" id="addQuestionBtn">+ 添加题目</button>
       <button class="btn-secondary" id="downloadCustomJson">📥 下载 JSON</button>
     </div>
+    <button class="btn-secondary" id="clearCustomBtn" style="display:block;margin:0 auto 12px;padding:6px 16px;font-size:12px">🗑 一键清空</button>
     <button class="btn-primary" id="finishCustomBtn" style="display:block;margin:12px auto">✅ 完成编辑，开始答题</button>
   </div>
 </div>
@@ -957,6 +958,18 @@ textarea{
         </label>
       </div>
       <button class="dialog-btn ghost" id="reasonCancel" style="margin-top:10px">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="dialog-overlay" id="confirmDialog" style="display:none">
+  <div class="dialog-box">
+    <div class="dialog-title" id="confirmTitle">确认</div>
+    <div class="dialog-body" id="confirmBody"></div>
+    <div class="dialog-btns">
+      <button class="dialog-btn" id="confirmOk" style="background:var(--red);color:#fff">确认</button>
+      <button class="dialog-btn ghost" id="confirmCancel">取消</button>
     </div>
   </div>
 </div>
@@ -1249,6 +1262,19 @@ textarea{
 
   // === Custom Editor ===
   let customQuestions = [];
+  function loadCustomQuestions(){
+    try{
+      const raw = localStorage.getItem('fc_custom');
+      if(raw){
+        const arr = JSON.parse(raw);
+        if(Array.isArray(arr)) customQuestions = arr;
+      }
+    }catch(e){ customQuestions = []; }
+  }
+  function saveCustomQuestions(){
+    syncCustomEditor();
+    localStorage.setItem('fc_custom', JSON.stringify(customQuestions));
+  }
   const customPage = $('customPage');
   const customEditor = $('customEditor');
   const addQuestionBtn = $('addQuestionBtn');
@@ -1313,6 +1339,7 @@ textarea{
           q.referenceAnswer = q._textAnswer || '';
         }
         renderCustomEditor();
+        saveCustomQuestions();
       });
     });
 
@@ -1322,6 +1349,7 @@ textarea{
         const qi = parseInt(btn.dataset.qi);
         customQuestions.splice(qi, 1);
         renderCustomEditor();
+        saveCustomQuestions();
       });
     });
   }
@@ -1360,7 +1388,8 @@ textarea{
   }
 
   $('customBtn').addEventListener('click',()=>{
-    customQuestions = [getDefaultQuestion('choice')];
+    loadCustomQuestions();
+    if(customQuestions.length === 0) customQuestions = [getDefaultQuestion('choice')];
     renderCustomEditor();
     showPage('custom');
   });
@@ -1378,6 +1407,7 @@ textarea{
     syncCustomEditor();
     customQuestions.push(getDefaultQuestion('choice'));
     renderCustomEditor();
+    saveCustomQuestions();
   });
 
   function validateCustomQuestions(){
@@ -1443,6 +1473,20 @@ textarea{
       addQuestionBtn.style.cursor = '';
     }
   }
+
+  $('clearCustomBtn').addEventListener('click',()=>{
+    const dlg = document.getElementById('confirmDialog');
+    document.getElementById('confirmBody').textContent = '确定要清空所有自定义题目吗？此操作不可撤销。';
+    dlg.style.display = 'flex';
+    document.getElementById('confirmOk').onclick = ()=>{
+      dlg.style.display = 'none';
+      customQuestions = [getDefaultQuestion('choice')];
+      localStorage.removeItem('fc_custom');
+      renderCustomEditor();
+      showToast('已清空','success');
+    };
+    document.getElementById('confirmCancel').onclick = ()=>{ dlg.style.display = 'none'; };
+  });
 
   finishCustomBtn.addEventListener('click',()=>{
     syncCustomEditor();
@@ -1511,6 +1555,7 @@ textarea{
       customQuestions = clipData.map(q=>({...q}));
       renderCustomEditor();
       showToast('已从剪贴板导入 ' + customQuestions.length + ' 题', 'success');
+      saveCustomQuestions();
     };
     dlgFileBtn.onclick = ()=>{ dlg.style.display = 'none'; customImportFile.click(); };
     dlgCancel.onclick = ()=>{ dlg.style.display = 'none'; };
@@ -1526,6 +1571,7 @@ textarea{
         customQuestions = parsed.map(q=>({...q}));
         renderCustomEditor();
         showToast('已导入 ' + customQuestions.length + ' 题', 'success');
+        saveCustomQuestions();
       }catch(err){ showToast('JSON 无效'); }
     };
     reader.readAsText(file);
