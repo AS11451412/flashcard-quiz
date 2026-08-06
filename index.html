@@ -1428,7 +1428,7 @@ textarea{
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = '自定义题目.json';
     a.click(); URL.revokeObjectURL(a.href);
-    showToast('已下载 '+out.length+' 题','success');
+    showToast('已下载 '+out.length+' 题 JSON','success');
   });
 
   // Grey out add button at 50
