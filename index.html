@@ -2388,7 +2388,7 @@ ${qInfo}
         timeoutId = setTimeout(() => {
           timeoutController.abort();
           reject(new DOMException('请求超时', 'TimeoutError'));
-        }, engine === 'doubao' ? 300000 : (questionCount >= 30 ? 300000 : questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
+        }, engine === 'doubao' ? 500000 : (questionCount >= 30 ? 300000 : questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
       });
       const res = await Promise.race([
         timeoutPromise,
@@ -3205,7 +3205,7 @@ ${answerInfo}
         timeoutId = setTimeout(() => {
           timeoutController.abort();
           reject(new DOMException('请求超时', 'TimeoutError'));
-        }, engine === 'doubao' ? 300000 : (questionCount >= 30 ? 300000 : questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
+        }, engine === 'doubao' ? 500000 : (questionCount >= 30 ? 300000 : questionCount > 20 ? 240000 : questionCount >= 15 ? 180000 : questionCount >= 10 ? 120000 : 60000));
       });
 
       // Race: fetch + stream read vs timeout
