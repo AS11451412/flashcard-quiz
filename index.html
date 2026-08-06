@@ -1275,6 +1275,16 @@ textarea{
     syncCustomEditor();
     localStorage.setItem('fc_custom', JSON.stringify(customQuestions));
   }
+
+  // Auto-save on input (throttled)
+  let _autoSaveTimer = 0;
+  customEditor.addEventListener('input',()=>{
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(()=>{
+      syncCustomEditor();
+      localStorage.setItem('fc_custom', JSON.stringify(customQuestions));
+    }, 500);
+  });
   const customPage = $('customPage');
   const customEditor = $('customEditor');
   const addQuestionBtn = $('addQuestionBtn');
