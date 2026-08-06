@@ -1186,10 +1186,10 @@ textarea{
       }catch(e){ showToast('JSON 格式无效：'+e.message); }
       importDialog.style.display = 'none';
     });
-    document.getElementById('dlgFile').addEventListener('click',()=>{
+    document.getElementById('dlgFile').onclick = ()=>{
       importDialog.style.display = 'none';
       importFile.click();
-    });
+    };
     document.getElementById('dlgCancel').addEventListener('click',()=>{
       importDialog.style.display = 'none';
     });
