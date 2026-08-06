@@ -1422,11 +1422,11 @@ textarea{
   const customImportBtn = $('customImportBtn');
   const customImportFile = $('customImportFile');
   customImportBtn.addEventListener('click',async ()=>{
-    let clipCount = 0;
+    let hasClipboard = false; let clipCount = 0; let clipData = null;
     try{
       const text = await navigator.clipboard.readText();
       const parsed = JSON.parse(text);
-      if(Array.isArray(parsed) && parsed.length > 0){ hasClipboard = true; clipCount = parsed.length; }
+      if(Array.isArray(parsed) && parsed.length > 0){ hasClipboard = true; clipCount = parsed.length; clipData = parsed; }
     }catch(e){}
 
     const dlg = document.getElementById('importDialog');
@@ -1447,15 +1447,15 @@ textarea{
     }
     dlg.style.display = 'flex';
 
-    dlgClip.onclick = async ()=>{
+    dlgClip.onclick = ()=>{
       dlg.style.display = 'none';
-      try{
-        const text = await navigator.clipboard.readText();
-        const parsed = JSON.parse(text);
-        customQuestions = parsed.map(q=>({...q}));
+      if(!clipData){ showToast('剪贴板无效'); return; }
+      customQuestions = clipData.map(q=>({...q}));
+      renderCustomEditor();
+      showToast('已从剪贴板导入 ' + customQuestions.length + ' 题', 'success');
+    };
         renderCustomEditor();
         showToast('已从剪贴板导入 ' + customQuestions.length + ' 题', 'success');
-      }catch(e){ showToast('剪贴板无效'); }
     };
     dlgFileBtn.onclick = ()=>{ dlg.style.display = 'none'; customImportFile.click(); };
     dlgCancel.onclick = ()=>{ dlg.style.display = 'none'; };
