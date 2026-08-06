@@ -1069,7 +1069,10 @@ textarea{
     submitBtn.addEventListener('click', submitQuiz);
 
     // Retry
-    retryBtn.addEventListener('click',()=>{ contentInput.value=''; showPage('setup'); });
+    retryBtn.addEventListener('click',()=>{
+      if(cameFromCustom){ cameFromCustom = false; showPage('custom'); }
+      else{ contentInput.value=''; showPage('setup'); }
+    });
 
     // Engine pills
     engineGroup.querySelectorAll('.pill').forEach(p=>{
@@ -2317,7 +2320,7 @@ ${qInfo}
     [setupPage, quizPage, resultsPage, customPage, wrongBookPage, wrongRedoPage, featuredPage].forEach(p=>p.classList.remove('active'));
     if(name==='setup') setupPage.classList.add('active');
     if(name==='quiz') quizPage.classList.add('active');
-    if(name==='results') resultsPage.classList.add('active');
+    if(name==='results'){ resultsPage.classList.add('active'); retryBtn.textContent = cameFromCustom ? '返回编辑器' : '再来一轮'; }
     if(name==='custom') customPage.classList.add('active');
     if(name==='wrongBook') wrongBookPage.classList.add('active');
     if(name==='wrongRedo') wrongRedoPage.classList.add('active');
