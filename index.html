@@ -1006,7 +1006,8 @@ textarea{
   let followUpAsked = [];
   let currentAbort = null;
   let engine = 'deepseek';
-  let jsonImported = false; // tracks if questions came from JSON import // 'deepseek' or 'doubao' // track current request for cancellation
+  let jsonImported = false; // tracks if questions came from JSON import
+  let cameFromCustom = false; // tracks if quiz was started from custom editor // 'deepseek' or 'doubao' // track current request for cancellation
 
   // === Init ===
   function init(){
@@ -1059,7 +1060,10 @@ textarea{
     generateBtn.addEventListener('click', generateQuestions);
 
     // Back
-    $('backToSetup').addEventListener('click',()=>{ showPage('setup'); });
+    $('backToSetup').addEventListener('click',()=>{
+      if(cameFromCustom){ cameFromCustom = false; showPage('custom'); }
+      else showPage('setup');
+    });
 
     // Submit
     submitBtn.addEventListener('click', submitQuiz);
@@ -1407,6 +1411,7 @@ textarea{
     jsonImported = true;
     userAnswers = questions.map(() => ({ selectedIndex: null, selectedIndexes: [], textAnswer: '', confidence: null }));
     followUpAsked = questions.map(() => false);
+    cameFromCustom = true;
     renderQuiz();
     showPage('quiz');
   });
