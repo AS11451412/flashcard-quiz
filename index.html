@@ -905,7 +905,11 @@ textarea{
     <h3 style="text-align:center;margin:16px 0 4px;color:var(--text)">自定义题目</h3>
     <p style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">手动添加选择题、多选题或填空题</p>
     <div id="customEditor"></div>
-    <button class="btn-secondary" id="addQuestionBtn" style="display:block;margin:12px auto">+ 添加题目</button>
+    <div style="display:flex;gap:10px;justify-content:center;align-items:center;margin:12px 0">
+      <button class="btn-secondary" id="copyCustomJson">📋 复制 JSON</button>
+      <button class="btn-secondary" id="addQuestionBtn">+ 添加题目</button>
+      <button class="btn-secondary" id="downloadCustomJson">📥 下载 JSON</button>
+    </div>
     <button class="btn-primary" id="finishCustomBtn" style="display:block;margin:12px auto">✅ 完成编辑，开始答题</button>
   </div>
 </div>
@@ -1374,6 +1378,57 @@ textarea{
     syncCustomEditor();
     customQuestions.push(getDefaultQuestion('choice'));
     renderCustomEditor();
+  });
+
+  function validateCustomQuestions(){
+    syncCustomEditor();
+    if(customQuestions.length === 0) return showToast('没有题目');
+    const out = [];
+    for(let i=0;i<customQuestions.length;i++){
+      const q = customQuestions[i];
+      const t = q.type;
+      if(!['choice','multi','text'].includes(t)) return showToast(`第 ${i+1} 题类型无效：${t}`);
+      if(!q.question?.trim()) return showToast(`第 ${i+1} 题题目不能为空`);
+      if(t==='text'){
+        if(!q.referenceAnswer?.trim()) return showToast(`第 ${i+1} 题缺少参考答案`);
+        out.push({type:'text',question:q.question.trim(),referenceAnswer:q.referenceAnswer.trim(),explanation:q.explanation?.trim()||''});
+      }else{
+        const opts = q.options || [];
+        const exp = t==='multi' ? 6 : 5;
+        if(opts.length !== exp) return showToast(`第 ${i+1} 题需要 ${exp} 个选项（当前${opts.length}个）`);
+        if(opts.some(o=>!o?.trim())) return showToast(`第 ${i+1} 题选项不能为空`);
+        const clean = {type:t,question:q.question.trim(),options:opts.map(o=>o.trim()),explanation:q.explanation?.trim()||''};
+        if(t==='multi'){
+          if(!Array.isArray(q.correctIndexes)||q.correctIndexes.length!==2) return showToast(`第 ${i+1} 题必须选恰好2个正确答案`);
+          clean.correctIndexes = [...q.correctIndexes];
+        }else{
+          if(typeof q.correctIndex!=='number'||q.correctIndex<0) return showToast(`第 ${i+1} 题必须选1个正确答案`);
+          clean.correctIndex = q.correctIndex;
+        }
+        out.push(clean);
+      }
+    }
+    return out;
+  }
+
+  $('copyCustomJson').addEventListener('click',()=>{
+    const out = validateCustomQuestions();
+    if(!out) return;
+    navigator.clipboard.writeText(JSON.stringify(out,null,2)).then(()=>{
+      showToast('已复制 '+out.length+' 题 JSON','success');
+    }).catch(()=>{
+      showToast('复制失败，请重试');
+    });
+  });
+
+  $('downloadCustomJson').addEventListener('click',()=>{
+    const out = validateCustomQuestions();
+    if(!out) return;
+    const blob = new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = '自定义题目.json';
+    a.click(); URL.revokeObjectURL(a.href);
+    showToast('已下载 '+out.length+' 题','success');
   });
 
   // Grey out add button at 50
